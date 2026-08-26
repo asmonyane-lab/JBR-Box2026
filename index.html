@@ -1,1 +1,2080 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>دفتر التجارة</title>
+<link id="manifestLink" rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0F2436">
+<link id="iconLink" rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link id="appleIconLink" rel="apple-touch-icon" href="./icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="دفتر التجارة">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<style>
+  :root{
+    --bg:#0F2436;
+    --bg-soft:#132C41;
+    --surface:#1B3A54;
+    --surface-2:#20455F;
+    --border:rgba(243,238,225,0.12);
+    --gold:#C9A15C;
+    --gold-soft:rgba(201,161,92,0.15);
+    --green:#3E8E7E;
+    --green-soft:rgba(62,142,126,0.16);
+    --red:#C1583F;
+    --red-soft:rgba(193,88,63,0.16);
+    --text:#F3EEE1;
+    --muted:#9FB2C2;
+    --radius:14px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0;}
+  html,body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Tajawal',sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,.display{font-family:'El Messiri',serif;}
 
+  .zellige-strip{
+    height:8px;
+    background:
+      repeating-linear-gradient(135deg, var(--gold) 0 6px, transparent 6px 12px),
+      repeating-linear-gradient(45deg, var(--green) 0 6px, transparent 6px 12px);
+    background-size:16px 16px,16px 16px;
+    background-position:0 0, 8px 0;
+    opacity:0.9;
+  }
+
+  header.top{
+    padding:18px 16px 14px;
+    padding-top:calc(18px + env(safe-area-inset-top));
+    padding-left:calc(16px + env(safe-area-inset-left));
+    padding-right:calc(16px + env(safe-area-inset-right));
+    background:linear-gradient(180deg,var(--bg-soft),var(--bg));
+    border-bottom:1px solid var(--border);
+  }
+  .brand{
+    display:flex; align-items:center; gap:12px; justify-content:space-between; flex-wrap:wrap;
+  }
+  .brand-info{display:flex; align-items:center; gap:12px; min-width:0;}
+  .brand-info > div{min-width:0;}
+  .shop-logo{width:48px; height:48px; border-radius:12px; object-fit:cover; border:1px solid var(--border); background:var(--surface); flex-shrink:0;}
+  .brand h1{
+    margin:0; font-size:22px; color:var(--gold); font-weight:700; letter-spacing:.3px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .brand p{margin:2px 0 0; color:var(--muted); font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .star{color:var(--green); font-size:16px; margin-left:6px;}
+
+  .actions-bar{
+    display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; padding:14px 16px; background:var(--bg-soft);
+    border-bottom:1px solid var(--border);
+    padding-left:calc(16px + env(safe-area-inset-left));
+    padding-right:calc(16px + env(safe-area-inset-right));
+  }
+  .actions-bar .btn:first-child{ grid-column:1 / -1; }
+  .btn{
+    border:none; cursor:pointer; font-family:'Tajawal',sans-serif; font-weight:700;
+    padding:13px 16px; border-radius:10px; font-size:14.5px; transition:transform .12s, filter .12s;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    min-height:46px; touch-action:manipulation;
+  }
+  .btn:active{transform:scale(0.97);}
+  .btn-gold{background:var(--gold); color:#1a1206;}
+  .btn-green{background:var(--green); color:#082420;}
+  .btn-outline{background:transparent; color:var(--text); border:1px solid var(--border);}
+  .btn-danger{background:var(--red-soft); color:#ffd7cb;}
+  .btn-sm{padding:9px 12px; font-size:13px; border-radius:8px; min-height:38px;}
+  .btn:hover{filter:brightness(1.08);}
+  .btn:disabled{opacity:.5; cursor:not-allowed;}
+
+  nav.tabs{
+    display:flex; gap:4px; padding:12px 16px 0; overflow-x:auto; background:var(--bg);
+    scrollbar-width:none; -ms-overflow-style:none;
+    padding-left:calc(16px + env(safe-area-inset-left));
+    padding-right:calc(16px + env(safe-area-inset-right));
+  }
+  nav.tabs::-webkit-scrollbar{display:none;}
+  .tab{
+    padding:11px 16px; border-radius:10px 10px 0 0; cursor:pointer; color:var(--muted);
+    font-weight:700; font-size:13.5px; white-space:nowrap; border:1px solid transparent;
+    touch-action:manipulation; flex-shrink:0;
+  }
+  .tab.active{
+    background:var(--surface); color:var(--gold); border:1px solid var(--border); border-bottom-color:var(--surface);
+  }
+
+  main{
+    padding:16px; max-width:1100px; margin:0 auto;
+    padding-left:calc(16px + env(safe-area-inset-left));
+    padding-right:calc(16px + env(safe-area-inset-right));
+  }
+  .panel{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px; margin-bottom:14px;
+  }
+  .grid-stats{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px;
+  }
+  .stat-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:14px; position:relative; overflow:hidden;
+  }
+  .stat-card::before{
+    content:"✦"; position:absolute; top:8px; left:10px; color:var(--gold); opacity:.5; font-size:14px;
+  }
+  .stat-card .label{color:var(--muted); font-size:12px; margin-bottom:6px;}
+  .stat-card .value{font-family:'El Messiri',serif; font-size:19px; font-weight:700; word-break:break-word;}
+  .stat-card.green .value{color:var(--green);}
+  .stat-card.gold .value{color:var(--gold);}
+  .stat-card.red .value{color:var(--red);}
+
+  .section-title{
+    display:flex; align-items:center; gap:8px; font-size:16px; font-weight:700; margin:0 0 12px;
+  }
+  .section-title::before{content:"◆"; color:var(--gold); font-size:11px;}
+
+  .table-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; margin:0 -16px; padding:0 16px; }
+  .table-scroll table{ min-width:520px; }
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  thead th{
+    text-align:right; color:var(--muted); font-weight:700; font-size:12px; padding:8px 8px;
+    border-bottom:1px solid var(--border); white-space:nowrap;
+  }
+  tbody td{padding:10px 8px; border-bottom:1px solid var(--border); vertical-align:middle;}
+  tbody td .btn-sm{margin:2px 2px 2px 0;}
+  tbody tr:hover{background:var(--surface-2);}
+  .empty-row{text-align:center; color:var(--muted); padding:26px !important;}
+  .badge{padding:3px 9px; border-radius:20px; font-size:12px; font-weight:700; white-space:nowrap;}
+  .badge.low{background:var(--red-soft); color:#ffcbbd;}
+  .badge.ok{background:var(--green-soft); color:#bfe9de;}
+
+  /* Modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(6,14,22,0.65); display:none;
+    align-items:flex-start; justify-content:center; padding:20px 12px; overflow-y:auto; z-index:50;
+    padding-top:calc(20px + env(safe-area-inset-top));
+    padding-bottom:calc(20px + env(safe-area-inset-bottom));
+  }
+  .overlay.show{display:flex;}
+  .modal{
+    background:var(--bg-soft); border:1px solid var(--border); border-radius:16px;
+    width:100%; max-width:560px; padding:18px; margin-top:10px;
+  }
+  .modal h2{margin:0 0 4px; color:var(--gold); font-size:19px;}
+  .modal .sub{color:var(--muted); font-size:13px; margin-bottom:16px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block; font-size:13px; color:var(--muted); margin-bottom:5px; font-weight:700;}
+  .field input, .field select{
+    width:100%; padding:11px 12px; border-radius:9px; border:1px solid var(--border);
+    background:var(--surface); color:var(--text); font-family:'Tajawal',sans-serif; font-size:16px;
+    min-height:44px;
+  }
+  .field input:focus, .field select:focus{outline:2px solid var(--gold); outline-offset:1px;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .line-item{
+    display:grid; grid-template-columns:2.2fr 0.8fr 1fr 1fr auto; gap:8px; align-items:end; margin-bottom:8px;
+  }
+  .line-item .field{margin-bottom:0;}
+  .remove-line{background:var(--red-soft); color:#ffcbbd; border:none; border-radius:8px; padding:9px 10px; cursor:pointer; min-height:44px; min-width:44px;}
+  .total-box{
+    display:flex; justify-content:space-between; align-items:center; background:var(--surface);
+    padding:12px 14px; border-radius:10px; margin:14px 0; border:1px solid var(--border);
+  }
+  .total-box .amount{font-family:'El Messiri',serif; font-size:22px; color:var(--gold); font-weight:700;}
+  .modal-actions{display:flex; gap:10px; justify-content:flex-end; margin-top:6px; flex-wrap:wrap;}
+  .modal-actions .btn{flex:1 1 auto; min-width:120px;}
+  .warn{color:#ffcbbd; font-size:12.5px; margin-top:4px;}
+
+  .invoice-head{text-align:center; margin-bottom:14px; border-bottom:2px dashed var(--border); padding-bottom:14px;}
+  .invoice-head h2{margin:0; color:var(--gold);}
+  .invoice-head p{color:var(--muted); margin:4px 0 0; font-size:13px;}
+  .invoice-table th, .invoice-table td{font-size:13.5px;}
+  .invoice-total{text-align:left; font-size:19px; font-weight:700; color:var(--gold); margin-top:10px; font-family:'El Messiri',serif;}
+
+  footer{
+    text-align:center; color:var(--muted); font-size:12px; padding:20px;
+    padding-bottom:calc(20px + env(safe-area-inset-bottom));
+  }
+
+  #toastContainer{
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%); z-index:100;
+    bottom:calc(18px + env(safe-area-inset-bottom));
+    display:flex; flex-direction:column; gap:8px; align-items:center; pointer-events:none;
+    max-width:92vw;
+  }
+  .toast{
+    background:var(--surface); border:1px solid var(--border); padding:10px 18px; border-radius:10px;
+    font-size:13.5px; font-weight:700; box-shadow:0 6px 18px rgba(0,0,0,0.35);
+    opacity:0; transform:translateY(10px); transition:opacity .25s, transform .25s;
+    white-space:normal; text-align:center;
+  }
+  .toast.show{opacity:1; transform:translateY(0);}
+  .toast.success{color:#bfe9de; border-color:var(--green);}
+  .toast.error{color:#ffcbbd; border-color:var(--red);}
+
+  #storageBanner{
+    display:none; margin:12px 16px 0; padding:12px 14px; background:var(--red-soft);
+    border:1px solid var(--red); border-radius:10px; font-size:13.5px; line-height:1.7;
+  }
+  #storageBanner.show{display:block;}
+  #storageBanner .banner-actions{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;}
+
+  @media print{
+    body *{visibility:hidden;}
+    #printArea, #printArea *{visibility:visible;}
+    #printArea{position:absolute; top:0; right:0; left:0; background:#fff; color:#111; padding:24px;}
+  }
+  @media (max-width:640px){
+    .line-item{
+      grid-template-columns:1fr 1fr; row-gap:8px;
+    }
+    .line-item .field:nth-child(1){ grid-column:1 / -1; }
+    .line-item .field:nth-child(4){ grid-column:1 / -1; }
+    .line-item .remove-line{ grid-column:1 / -1; justify-self:end; width:auto; padding:9px 16px; }
+    .row2{grid-template-columns:1fr;}
+    .brand h1{ max-width:52vw; }
+    .stat-card .value{ font-size:17px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <div class="brand-info">
+      <img id="shopLogo" class="shop-logo" style="display:none;">
+      <div>
+        <h1 id="shopTitle"><span class="star">✦</span>دفتر التجارة</h1>
+        <p id="shopSub">تسيير البيع والشراء والفواتير، والزبناء والموردين — لتجارتك ديال كل يوم</p>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+      <button class="btn btn-outline btn-sm" onclick="openSettingsModal()">⚙️ إعدادات المحل</button>
+      <span id="syncBadge" style="display:none; font-size:11px; font-weight:700;"></span>
+    </div>
+  </div>
+</header>
+<div class="zellige-strip"></div>
+
+<div class="actions-bar">
+  <button class="btn btn-gold" onclick="openSaleModal()">🧾 بيع جديد</button>
+  <button class="btn btn-green" onclick="openPurchaseModal()">📦 شراء جديد</button>
+  <button class="btn btn-outline" onclick="openOrderModal()">📋 طلب زبون جديد</button>
+  <button class="btn btn-outline" onclick="openClientModal()">👤 زبون جديد</button>
+  <button class="btn btn-outline" onclick="openSupplierModal()">🚚 مورد جديد</button>
+  <button class="btn btn-outline" onclick="openProductModal()">🛒 منتوج جديد</button>
+</div>
+
+<div id="storageBanner"></div>
+
+<nav class="tabs" id="tabs"></nav>
+
+<main id="main"></main>
+
+<footer>دفتر التجارة — البيانات محفوظة عندك فقط</footer>
+
+<!-- Overlay/Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modalBody"></div>
+</div>
+
+<div id="toastContainer"></div>
+<input type="file" id="importFileInput" accept="application/json" style="display:none" onchange="handleImportFile(this)">
+
+<script>
+const CURRENCY = 'DH';
+let state = { products: [], clients: [], suppliers: [], sales: [], purchases: [], openingBalances: [], orders: [], settings: {shopName:'', phone:'', logo:''} };
+let activeTab = 'overview';
+let salePaidTouched = false;
+let purchPaidTouched = false;
+let saleTotalTouched = false;
+let purchTotalTouched = false;
+let productSearch = '';
+let clientSearch = '';
+let supplierSearch = '';
+let storageAvailable = true;
+const STORAGE_PREFIX = 'daftar_tijara_';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBT-IGgYZvBgIJ_IfZYbt5ST5vlI_Y2CG4",
+  authDomain: "jbrbox-14d1a.firebaseapp.com",
+  databaseURL: "https://jbrbox-14d1a-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "jbrbox-14d1a",
+  storageBucket: "jbrbox-14d1a.firebasestorage.app",
+  messagingSenderId: "906166494108",
+  appId: "1:906166494108:web:ecc1d09b2ae00ec1f19e59"
+};
+let fbApp = null, fbDb = null, fbAuth = null, fbRef = null, applyingRemoteData = false, cloudSyncEnabled = false;
+let fbUser = null;
+
+function ensureFirebaseApp(){
+  if(typeof firebase==='undefined'){
+    console.error('Firebase SDK ما تحملش (typeof firebase === undefined)');
+    return false;
+  }
+  if(fbApp) return true;
+  try{
+    fbApp = firebase.initializeApp(firebaseConfig);
+    fbDb = firebase.database();
+    if(typeof firebase.auth !== 'function'){
+      console.error('firebase.auth ماشي متوفرة - firebase-auth-compat.js ما تحملش');
+      fbApp = null;
+      return false;
+    }
+    fbAuth = firebase.auth();
+    fbAuth.onAuthStateChanged((user)=>{
+      fbUser = user;
+      renderSyncBadge();
+      initCloudSync();
+    });
+    return true;
+  }catch(e){
+    console.error('تعذرت تهيئة Firebase:', e);
+    fbApp = null;
+    return false;
+  }
+}
+function currentSyncKey(){
+  if(fbUser) return 'user_'+fbUser.uid;
+  const storeId = (state.settings.storeId||'').trim();
+  return storeId ? 'code_'+storeId : '';
+}
+async function signInWithGoogle(){
+  if(!ensureFirebaseApp()){
+    alert('تعذر تحميل خدمة تسجيل الدخول. تحقق من الاتصال بالانترنت وعاود جرب. إلا تكرر المشكل، يمكن يكون شي حاجب (ad-blocker/VPN) كيمنع تحميل مكتبة Google.');
+    return;
+  }
+  try{
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await fbAuth.signInWithPopup(provider);
+    showToast('تم تسجيل الدخول ✓', 'success');
+    closeModal();
+    openSettingsModal();
+  }catch(e){
+    console.error('Google sign-in error:', e.code, e.message);
+    let msg = 'تعذر تسجيل الدخول: ' + (e.code || e.message || 'خطأ غير معروف');
+    if(e.code === 'auth/unauthorized-domain'){
+      msg = 'هاد الموقع (' + location.hostname + ') ماشي مصرح ليه فFirebase. زيدو فـ Authentication > Settings > Authorized domains';
+    } else if(e.code === 'auth/popup-blocked'){
+      msg = 'المتصفح حجب النافذة المنبثقة. فعل النوافذ المنبثقة وعاود جرب';
+    } else if(e.code === 'auth/operation-not-supported-in-this-environment'){
+      msg = 'هاد المتصفح/البيئة ما كتدعمش تسجيل الدخول بهاد الطريقة. جرب من متصفح Chrome مباشرة';
+    }
+    alert(msg);
+    showToast('تعذر تسجيل الدخول', 'error');
+  }
+}
+async function signOutOfGoogle(){
+  if(!fbAuth) return;
+  try{
+    await fbAuth.signOut();
+    showToast('تم تسجيل الخروج', 'success');
+    closeModal();
+    openSettingsModal();
+  }catch(e){ console.error(e); }
+}
+function initCloudSync(){
+  const key = currentSyncKey();
+  if(!key || !ensureFirebaseApp()){ cloudSyncEnabled = false; renderSyncBadge(); return; }
+  try{
+    if(fbRef) fbRef.off();
+    fbRef = fbDb.ref('stores/'+key);
+    cloudSyncEnabled = true;
+    fbRef.on('value', (snapshot)=>{
+      const data = snapshot.val();
+      renderSyncBadge();
+      if(!data){ pushToCloud(); return; } // ما كاين حتى بيانات فالسحاب بعد لهاد الحساب، نصيفطو الحالية
+      applyingRemoteData = true;
+      state.products = data.products || [];
+      state.clients = data.clients || [];
+      state.suppliers = data.suppliers || [];
+      state.sales = data.sales || [];
+      state.purchases = data.purchases || [];
+      state.openingBalances = data.openingBalances || [];
+      state.orders = data.orders || [];
+      if(data.settings){
+        const keepStoreId = state.settings.storeId;
+        state.settings = {...state.settings, ...data.settings};
+        if(fbUser) state.settings.storeId = keepStoreId; // ماشي مهم ملي كنخدمو بالحساب
+      }
+      storageSet('products', state.products);
+      storageSet('clients', state.clients);
+      storageSet('suppliers', state.suppliers);
+      storageSet('sales', state.sales);
+      storageSet('purchases', state.purchases);
+      storageSet('openingBalances', state.openingBalances);
+      storageSet('orders', state.orders);
+      storageSet('settings', state.settings);
+      renderHeader();
+  updatePWAIdentity();
+      render();
+      applyingRemoteData = false;
+    }, (err)=>{
+      console.error('تعذر الاتصال بالمزامنة', err);
+      cloudSyncEnabled = false;
+      renderSyncBadge();
+    });
+  }catch(e){
+    console.error('تعذر تفعيل المزامنة', e);
+    cloudSyncEnabled = false;
+    renderSyncBadge();
+  }
+}
+function pushToCloud(){
+  if(!cloudSyncEnabled || applyingRemoteData || !fbRef) return;
+  fbRef.set({
+    products: state.products,
+    clients: state.clients,
+    suppliers: state.suppliers,
+    sales: state.sales,
+    purchases: state.purchases,
+    openingBalances: state.openingBalances,
+    orders: state.orders,
+    settings: state.settings,
+    updatedAt: Date.now()
+  }).catch(e=> console.error('تعذرت المزامنة السحابية', e));
+}
+function renderSyncBadge(){
+  const el = document.getElementById('syncBadge');
+  if(!el) return;
+  const key = currentSyncKey();
+  if(!key){ el.style.display='none'; return; }
+  el.style.display='inline-flex';
+  if(fbUser){
+    el.textContent = cloudSyncEnabled ? `🔗 متصل: ${fbUser.email}` : '⚠️ تعذرت المزامنة';
+  } else {
+    el.textContent = cloudSyncEnabled ? '🔗 مزامنة مفعّلة' : '⚠️ تعذرت المزامنة';
+  }
+  el.style.color = cloudSyncEnabled ? '#bfe9de' : '#ffcbbd';
+}
+
+function checkStorageAvailable(){
+  try{
+    localStorage.setItem(STORAGE_PREFIX+'__healthcheck__', '1');
+    localStorage.removeItem(STORAGE_PREFIX+'__healthcheck__');
+    return true;
+  }catch(e){
+    console.error('التخزين المحلي غير متوفر', e);
+    return false;
+  }
+}
+function storageGet(key){
+  try{
+    const raw = localStorage.getItem(STORAGE_PREFIX+key);
+    return raw!==null ? JSON.parse(raw) : null;
+  }catch(e){
+    console.error('تعذرت قراءة', key, e);
+    return null;
+  }
+}
+function storageSet(key, value){
+  try{
+    localStorage.setItem(STORAGE_PREFIX+key, JSON.stringify(value));
+    return true;
+  }catch(e){
+    console.error('تعذر الحفظ', key, e);
+    return false;
+  }
+}
+function renderStorageBanner(){
+  const el = document.getElementById('storageBanner');
+  if(!el) return;
+  if(storageAvailable){ el.className=''; el.innerHTML=''; return; }
+  el.className = 'show';
+  el.innerHTML = `
+    <strong>⚠️ التخزين غير متوفر فهاد المتصفح.</strong><br>
+    يمكن يكون المتصفح فوضعية التصفح الخفي، أو التخزين معطل من الإعدادات.
+    البيانات غادي تبقى محفوظة غير فهاد الجلسة، وغادي تضيع إلا سديتي الصفحة.
+    حمل نسخة احتياطية من وقت لآخر باش ما تضيعش المعلومات.
+    <div class="banner-actions">
+      <button class="btn btn-gold btn-sm" onclick="exportBackup()">⬇️ تحميل نسخة احتياطية</button>
+      <button class="btn btn-outline btn-sm" onclick="triggerImport()">⬆️ استرجاع نسخة احتياطية</button>
+    </div>
+  `;
+}
+function exportBackup(){
+  const data = {
+    products: state.products, clients: state.clients, suppliers: state.suppliers,
+    sales: state.sales, purchases: state.purchases, settings: state.settings
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `نسخة_احتياطية_${todayStr()}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  showToast('تم تحميل النسخة الاحتياطية ✓', 'success');
+}
+function triggerImport(){
+  document.getElementById('importFileInput').click();
+}
+function handleImportFile(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    let data;
+    try{
+      data = JSON.parse(reader.result);
+    }catch(e){
+      alert('الملف غير صالح، تأكد أنه نسخة احتياطية صحيحة');
+      input.value='';
+      return;
+    }
+    showConfirmModal('غادي تعوض جميع البيانات الحالية بهاد النسخة الاحتياطية. متأكد؟', ()=>{
+      state.products = data.products || [];
+      state.clients = data.clients || [];
+      state.suppliers = data.suppliers || [];
+      state.sales = data.sales || [];
+      state.purchases = data.purchases || [];
+      state.settings = data.settings || {shopName:'', phone:'', logo:''};
+      renderHeader();
+  updatePWAIdentity();
+      saveAll(['products','clients','suppliers','sales','purchases'], 'تم استرجاع النسخة الاحتياطية ✓');
+      saveSettingsStorage();
+      closeModal();
+      render();
+    }, '✅ نعم، استرجاع');
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
+function uid(prefix){ return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function money(n){ return '\u202A' + (Number(n)||0).toFixed(2) + ' ' + CURRENCY + '\u202C'; }
+function fmtPhone(phone){ return phone ? `<bdi>${phone}</bdi>` : ''; }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function fmtDate(d){
+  try{
+    const dt = new Date(d);
+    if(isNaN(dt.getTime())) return d;
+    const day = String(dt.getDate()).padStart(2,'0');
+    const month = String(dt.getMonth()+1).padStart(2,'0');
+    const year = dt.getFullYear();
+    return `${day}/${month}/${year}`;
+  }catch(e){ return d; }
+}
+
+async function loadAll(){
+  storageAvailable = checkStorageAvailable();
+  renderStorageBanner();
+  if(storageAvailable){
+    const keys = ['products','clients','suppliers','sales','purchases','openingBalances','orders'];
+    keys.forEach(k=>{ state[k] = storageGet(k) || []; });
+    state.settings = storageGet('settings') || {shopName:'', phone:'', logo:''};
+  }
+  renderHeader();
+  updatePWAIdentity();
+  render();
+  ensureFirebaseApp();
+  initCloudSync();
+}
+function showToast(message, type){
+  const container = document.getElementById('toastContainer');
+  if(!container) return;
+  const el = document.createElement('div');
+  el.className = 'toast ' + (type||'success');
+  el.textContent = message;
+  container.appendChild(el);
+  requestAnimationFrame(()=> el.classList.add('show'));
+  setTimeout(()=>{
+    el.classList.remove('show');
+    setTimeout(()=> el.remove(), 300);
+  }, 2200);
+}
+async function saveAll(keys, successMsg){
+  if(!storageAvailable){
+    storageAvailable = checkStorageAvailable();
+    renderStorageBanner();
+    if(!storageAvailable){
+      showToast('تعذر الحفظ، تحقق من إعدادات المتصفح', 'error');
+      return false;
+    }
+  }
+  let ok = true;
+  keys.forEach(k=>{
+    if(!storageSet(k, state[k])) ok = false;
+  });
+  if(ok) pushToCloud();
+  showToast(ok ? (successMsg || 'تم حفظ العملية ✓') : 'تعذر حفظ العملية، جرب مرة أخرى', ok ? 'success' : 'error');
+  return ok;
+}
+function saveSettingsStorage(){
+  if(!storageAvailable){
+    storageAvailable = checkStorageAvailable();
+    renderStorageBanner();
+    if(!storageAvailable){
+      showToast('تعذر حفظ الإعدادات، تحقق من إعدادات المتصفح', 'error');
+      return;
+    }
+  }
+  const ok = storageSet('settings', state.settings);
+  if(ok) pushToCloud();
+  showToast(ok ? 'تم حفظ إعدادات المحل ✓' : 'تعذر حفظ الإعدادات، جرب صورة أصغر ولا حاول مرة أخرى', ok ? 'success' : 'error');
+}
+function renderHeader(){
+  const s = state.settings;
+  document.getElementById('shopTitle').innerHTML = `<span class="star">✦</span><bdi>${s.shopName ? s.shopName : 'دفتر التجارة'}</bdi>`;
+  document.getElementById('shopSub').innerHTML = s.phone ? `${fmtPhone(s.phone)} 📞` : 'تسيير البيع والشراء والفواتير، والزبناء والموردين';
+  const logoEl = document.getElementById('shopLogo');
+  if(s.logo){ logoEl.src = s.logo; logoEl.style.display='block'; }
+  else{ logoEl.style.display='none'; }
+}
+function compressImage(file, maxDim, quality){
+  maxDim = maxDim || 240; quality = quality || 0.82;
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let width = img.width, height = img.height;
+        if(width > height){ if(width > maxDim){ height = Math.round(height*maxDim/width); width = maxDim; } }
+        else{ if(height > maxDim){ width = Math.round(width*maxDim/height); height = maxDim; } }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = ()=>reject(new Error('صورة غير صالحة'));
+      img.src = reader.result;
+    };
+    reader.onerror = ()=>reject(new Error('تعذرت قراءة الملف'));
+    reader.readAsDataURL(file);
+  });
+}
+function openSettingsModal(){
+  const s = state.settings;
+  showModal(`
+    <h2>إعدادات المحل</h2>
+    <div class="sub">هاد المعلومات غادي تبان فوق التطبيق وفالفاتورة ديالك</div>
+    <div class="field"><label>اسم المحل</label><input id="setShopName" dir="ltr" value="${s.shopName||''}" placeholder="مثلا: Épicerie Al Baraka"></div>
+    <div class="field"><label>رقم الهاتف</label><input id="setPhone" dir="ltr" value="${s.phone||''}" placeholder="06XXXXXXXX"></div>
+    <div class="field"><label>لوگو المحل (اختياري)</label>
+      ${s.logo?`<div style="margin-bottom:8px;"><img src="${s.logo}" style="width:60px;height:60px;border-radius:10px;object-fit:cover;border:1px solid var(--border);"></div>`:''}
+      <input id="setLogo" type="file" accept="image/*">
+    </div>
+    <div class="field">
+      <label>المزامنة بين الهواتف</label>
+      ${fbUser ? `
+        <div style="display:flex; align-items:center; justify-content:space-between; background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:10px 12px;">
+          <span style="font-size:13.5px;"><bdi>${fbUser.email}</bdi> ✓</span>
+          <button type="button" class="btn btn-outline btn-sm" onclick="signOutOfGoogle()">تسجيل الخروج</button>
+        </div>
+        <div class="warn" style="margin-top:6px;">دخل بنفس هاد الحساب (Gmail) فأي هاتف آخر باش تشارك نفس البيانات تلقائيا.</div>
+      ` : `
+        <button type="button" class="btn btn-outline" style="width:100%;" onclick="signInWithGoogle()">🔵 تسجيل الدخول بـ Gmail</button>
+        <div class="warn" style="margin-top:6px;">سجل بنفس حساب Gmail فكل الهواتف باش تشارك نفس البيانات تلقائيا. ما خاصكش تكتب حتى شي معرف بيدك.</div>
+      `}
+    </div>
+    ${!fbUser ? `
+    <div class="field">
+      <label>ولا: معرف مزامنة بديل بلا Gmail (اختياري)</label>
+      <input id="setStoreId" dir="ltr" value="${s.storeId||''}" placeholder="مثلا: hanout-omar-2026">
+      <div class="warn" style="margin-top:6px;">غير إلا ما بغيتيش تستعمل Gmail — دخل نفس المعرف بالضبط فكل الهواتف.</div>
+    </div>` : ''}
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-gold" onclick="saveSettings()">حفظ</button>
+    </div>
+  `);
+}
+async function saveSettings(){
+  const shopName = document.getElementById('setShopName').value.trim();
+  const phone = document.getElementById('setPhone').value.trim();
+  const storeIdInput = document.getElementById('setStoreId');
+  const storeId = storeIdInput ? storeIdInput.value.trim() : (state.settings.storeId||'');
+  const fileInput = document.getElementById('setLogo');
+  const file = fileInput.files[0];
+  const saveBtn = document.querySelector('#modalBody .btn-gold');
+  if(file){
+    if(saveBtn){ saveBtn.disabled = true; saveBtn.textContent = 'جاري التحميل...'; }
+    try{
+      state.settings.logo = await compressImage(file);
+    }catch(e){
+      console.error(e);
+      alert('تعذر تحميل الصورة، جرب صورة أخرى (jpg أو png)');
+      if(saveBtn){ saveBtn.disabled = false; saveBtn.textContent = 'حفظ'; }
+      return;
+    }
+  }
+  const storeIdChanged = storeId !== (state.settings.storeId||'');
+  state.settings.shopName = shopName;
+  state.settings.phone = phone;
+  state.settings.storeId = storeId;
+  await saveSettingsStorage();
+  renderHeader();
+  updatePWAIdentity();
+  closeModal();
+  if(storeIdChanged) initCloudSync();
+}
+
+/* ---------- Render ---------- */
+const TABS = [
+  {id:'overview', label:'نظرة عامة'},
+  {id:'orders', label:'الطلبات'},
+  {id:'sales', label:'المبيعات'},
+  {id:'purchases', label:'المشتريات'},
+  {id:'debts', label:'الديون'},
+  {id:'payments', label:'الأداءات'},
+  {id:'clients', label:'الزبناء'},
+  {id:'suppliers', label:'الموردين'},
+  {id:'products', label:'المنتوجات'},
+];
+
+function render(){
+  const tabsEl = document.getElementById('tabs');
+  tabsEl.innerHTML = TABS.map(t => `<div class="tab ${activeTab===t.id?'active':''}" onclick="setTab('${t.id}')">${t.label}</div>`).join('');
+  const main = document.getElementById('main');
+  if(activeTab==='overview') main.innerHTML = renderOverview();
+  else if(activeTab==='orders') main.innerHTML = renderOrders();
+  else if(activeTab==='sales') main.innerHTML = renderSales();
+  else if(activeTab==='purchases') main.innerHTML = renderPurchases();
+  else if(activeTab==='debts') main.innerHTML = renderDebts();
+  else if(activeTab==='payments') main.innerHTML = renderPayments();
+  else if(activeTab==='clients') main.innerHTML = renderClients();
+  else if(activeTab==='suppliers') main.innerHTML = renderSuppliers();
+  else if(activeTab==='products') main.innerHTML = renderProducts();
+}
+function setTab(id){ activeTab = id; render(); }
+
+const PAYMENT_METHODS = ['مخلص', 'دين'];
+function paymentMethodOptions(selected){
+  return PAYMENT_METHODS.map(m=>`<option value="${m}" ${m===(selected||'مخلص')?'selected':''}>${m}</option>`).join('');
+}
+function getAllPayments(){
+  const list = [];
+  state.sales.forEach(s=>{
+    (s.payments||[]).forEach(p=> list.push({date:p.date, amount:p.amount, method:p.method||'مخلص', kind:'قبض من زبون', party:s.partyName||'زبون عابر'}));
+  });
+  state.purchases.forEach(p=>{
+    (p.payments||[]).forEach(pay=> list.push({date:pay.date, amount:pay.amount, method:pay.method||'مخلص', kind:'أداء لمورد', party:p.partyName||'—'}));
+  });
+  return list.sort((a,b)=> new Date(b.date)-new Date(a.date));
+}
+function renderPayments(){
+  const payments = getAllPayments();
+  if(!payments.length) return emptyPanel('الأداءات', 'مازال ما تسجلات حتى عملية أداء. الأداءات كتتسجل تلقائيا ملي تدير بيع، شراء، ولا تسدد دين.');
+  const totalsByMethod = {};
+  payments.forEach(p=>{ totalsByMethod[p.method] = (totalsByMethod[p.method]||0) + p.amount; });
+  const statsHtml = Object.keys(totalsByMethod).map(m=>`
+    <div class="stat-card"><div class="label">${m}</div><div class="value">${money(totalsByMethod[m])}</div></div>
+  `).join('');
+  const rows = payments.map(p=>`
+    <tr>
+      <td>${fmtDate(p.date)}</td>
+      <td><span class="badge ${p.kind==='قبض من زبون'?'ok':'low'}">${p.kind}</span></td>
+      <td>${p.party}</td>
+      <td>${money(p.amount)}</td>
+      <td>${p.method}</td>
+    </tr>`).join('');
+  return `
+    <div class="grid-stats">${statsHtml}</div>
+    <div class="panel">
+      <div class="section-title">سجل كل الأداءات</div>
+      <div class="table-scroll">
+      <table><thead><tr><th>التاريخ</th><th>النوع</th><th>الطرف</th><th>المبلغ</th><th>الحالة</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+      </div>
+    </div>
+  `;
+}
+
+function saleRemaining(s){ return s.total - (s.paid!=null ? s.paid : s.total); }
+function purchRemaining(p){ return p.total - (p.paid!=null ? p.paid : p.total); }
+function obRemaining(o){ return o.total - (o.paid!=null ? o.paid : 0); }
+function clientDebtTotal(clientId){
+  const salesDebt = state.sales.filter(s=>s.partyId===clientId).reduce((sum,s)=>sum+Math.max(0,saleRemaining(s)),0);
+  const obDebt = state.openingBalances.filter(o=>o.kind==='client' && o.partyId===clientId).reduce((sum,o)=>sum+Math.max(0,obRemaining(o)),0);
+  return salesDebt + obDebt;
+}
+function supplierDebtTotal(supplierId){
+  const purchDebt = state.purchases.filter(p=>p.partyId===supplierId).reduce((sum,p)=>sum+Math.max(0,purchRemaining(p)),0);
+  const obDebt = state.openingBalances.filter(o=>o.kind==='supplier' && o.partyId===supplierId).reduce((sum,o)=>sum+Math.max(0,obRemaining(o)),0);
+  return purchDebt + obDebt;
+}
+
+function renderOverview(){
+  const totalSales = state.sales.reduce((s,x)=>s+x.total,0);
+  const totalPurchases = state.purchases.reduce((s,x)=>s+x.total,0);
+  const stockValue = state.products.reduce((s,p)=>s+(p.qty*p.buyPrice),0);
+  const lowStock = state.products.filter(p=>p.qty<=5);
+  const today = todayStr();
+  const todayProfit = state.sales.filter(s=>s.date===today).reduce((sum,s)=>{
+    return sum + s.items.reduce((isum,it)=>{
+      const prod = state.products.find(p=>p.id===it.productId);
+      const buy = prod ? prod.buyPrice : 0;
+      return isum + it.qty*(it.price - buy);
+    }, 0);
+  }, 0);
+  const clientDebt = state.sales.reduce((s,x)=>s+Math.max(0,saleRemaining(x)),0)
+    + state.openingBalances.filter(o=>o.kind==='client').reduce((s,o)=>s+Math.max(0,obRemaining(o)),0);
+  const supplierDebt = state.purchases.reduce((s,x)=>s+Math.max(0,purchRemaining(x)),0)
+    + state.openingBalances.filter(o=>o.kind==='supplier').reduce((s,o)=>s+Math.max(0,obRemaining(o)),0);
+  return `
+    <div class="grid-stats">
+      <div class="stat-card gold"><div class="label">مجموع المبيعات</div><div class="value">${money(totalSales)}</div></div>
+      <div class="stat-card"><div class="label">مجموع المشتريات</div><div class="value">${money(totalPurchases)}</div></div>
+      <div class="stat-card ${todayProfit<0?'red':'green'}"><div class="label">الربح الصافي اليوم</div><div class="value">${money(todayProfit)}</div></div>
+      <div class="stat-card"><div class="label">قيمة المخزون</div><div class="value">${money(stockValue)}</div></div>
+      <div class="stat-card ${lowStock.length?'red':''}"><div class="label">منتوجات ناقصة</div><div class="value">${lowStock.length}</div></div>
+      <div class="stat-card ${clientDebt>0?'red':''}"><div class="label">ديون الزبناء عندنا</div><div class="value">${money(clientDebt)}</div></div>
+      <div class="stat-card ${supplierDebt>0?'red':''}"><div class="label">ديون عند الموردين</div><div class="value">${money(supplierDebt)}</div></div>
+    </div>
+    <div class="panel">
+      <div class="section-title">الربح الصافي لكل يوم</div>
+      ${renderDailyProfit()}
+    </div>
+    <div class="panel">
+      <div class="section-title">آخر العمليات</div>
+      ${renderRecentOps()}
+    </div>
+  `;
+}
+function renderDailyProfit(){
+  const map = {};
+  state.sales.forEach(s=>{
+    if(!map[s.date]) map[s.date] = 0;
+    s.items.forEach(it=>{
+      const prod = state.products.find(p=>p.id===it.productId);
+      const buy = prod ? prod.buyPrice : 0;
+      map[s.date] += it.qty * (it.price - buy);
+    });
+  });
+  const days = Object.keys(map).sort((a,b)=> new Date(b)-new Date(a));
+  if(!days.length) return `<div class="empty-row">مازال ما كاين حتى بيع باش نحسبو الربح</div>`;
+  const rows = days.map(d=>{
+    const p = map[d];
+    return `<tr>
+      <td>${fmtDate(d)}</td>
+      <td style="color:${p>=0?'var(--green)':'var(--red)'}; font-weight:700;">${money(p)}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="table-scroll"><table><thead><tr><th>التاريخ</th><th>الربح الصافي</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function renderRecentOps(){
+  const ops = [
+    ...state.sales.map(s=>({...s, kind:'بيع'})),
+    ...state.purchases.map(p=>({...p, kind:'شراء'}))
+  ].sort((a,b)=> new Date(b.date)-new Date(a.date)).slice(0,8);
+  if(!ops.length) return `<p style="color:var(--muted)">مازال ما كاينة حتى عملية. بدا بزر "بيع جديد" ولا "شراء جديد" فوق.</p>`;
+  return `<div class="table-scroll"><table><thead><tr><th>النوع</th><th>التاريخ</th><th>الطرف</th><th>المجموع</th></tr></thead><tbody>
+    ${ops.map(o=>`<tr>
+      <td><span class="badge ${o.kind==='بيع'?'ok':'low'}">${o.kind}</span></td>
+      <td>${fmtDate(o.date)}</td>
+      <td>${o.partyName||'—'}</td>
+      <td>${money(o.total)}</td>
+    </tr>`).join('')}
+  </tbody></table></div>`;
+}
+
+function debtBadge(remaining){
+  return remaining>0 ? `<span class="badge low">${money(remaining)}</span>` : `<span class="badge ok">مخلص</span>`;
+}
+
+/* ---------- طلبات الزبناء وتتبع التسليم ---------- */
+const ORDER_STATUSES = ['جديد','قيد التحضير','في الطريق','تم التسليم','ملغي'];
+let orderTotalTouched = false;
+function orderStatusColor(status){
+  if(status==='تم التسليم') return 'ok';
+  if(status==='ملغي') return 'low';
+  return '';
+}
+function renderOrders(){
+  if(!state.orders.length) return emptyPanel('الطلبات', 'مازال ما سجلتي حتى طلب. اضغط على "طلب زبون جديد" باش تبدا.');
+  const rows = [...state.orders].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(o=>{
+    const delivered = o.status==='تم التسليم';
+    const cancelled = o.status==='ملغي';
+    return `<tr>
+      <td>${fmtDate(o.date)}</td>
+      <td>${o.partyName || 'زبون عابر'}${o.phone?`<br><span style="color:var(--muted); font-size:12px;">${fmtPhone(o.phone)}</span>`:''}</td>
+      <td>${o.items.length} منتوج</td>
+      <td>${money(o.total)}</td>
+      <td>
+        <select onchange="setOrderStatus('${o.id}', this.value)" ${delivered?'disabled':''} style="background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:6px 8px; font-family:'Tajawal',sans-serif; font-size:12.5px;">
+          ${ORDER_STATUSES.map(s=>`<option value="${s}" ${s===o.status?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="viewOrderDetail('${o.id}')">📄 التفاصيل</button>
+        ${!delivered && !cancelled ? `<button class="btn btn-outline btn-sm" onclick="openOrderModal('${o.id}')">✏️ تعديل</button>` : ''}
+        <button class="btn btn-green btn-sm" onclick="shareOrderWhatsapp('${o.id}')">🟢 واتساب</button>
+        ${!delivered ? `<button class="btn btn-gold btn-sm" onclick="openOrderDeliverModal('${o.id}')">✅ تم التسليم</button>` : (o.saleId?`<span style="color:var(--muted); font-size:12px;">دخل فالمبيعات ✓</span>`:'')}
+        <button class="btn btn-danger btn-sm" onclick="deleteRecord('orders','${o.id}')">حذف</button>
+      </td>
+    </tr>`;
+  }).join('');
+  return panelTable('الطلبات', ['التاريخ','الزبون','عدد المنتوجات','المجموع','الحالة',''], rows);
+}
+function setOrderStatus(orderId, newStatus){
+  const order = state.orders.find(o=>o.id===orderId);
+  if(!order) return;
+  if(newStatus==='تم التسليم'){ openOrderDeliverModal(orderId); return; }
+  order.status = newStatus;
+  saveAll(['orders'], 'تم تحديث حالة الطلب ✓');
+  render();
+}
+function openOrderModal(editId){
+  if(!state.products.length){ alert('خاصك تزيد منتوج بور اش تقدر تدير طلب'); openProductModal(); return; }
+  orderTotalTouched = false;
+  const editing = !!editId;
+  const order = editing ? state.orders.find(o=>o.id===editId) : null;
+  showModal(`
+    <h2>${editing?'تعديل الطلب':'طلب زبون جديد'}</h2>
+    <div class="sub">${editing?'صحح المنتوجات، الكمية، ولا معلومات الزبون فهاد الطلب':'اكتب معلومات الزبون والمنتوجات المطلوبة، والمجموع غادي يتحسب وحدو'}</div>
+    <input type="hidden" id="orderEditId" value="${editing?order.id:''}">
+    ${datalistOptionsHtml('clientsDatalist', state.clients.map(c=>c.name))}
+    ${datalistOptionsHtml('productsDatalist', state.products.map(p=>p.name))}
+    <div class="row2">
+      <div class="field"><label>التاريخ</label><input id="orderDate" type="date" value="${editing?order.date:todayStr()}"></div>
+      <div class="field"><label>الزبون</label>
+        <input type="text" id="orderClientName" list="clientsDatalist" placeholder="اكتب الاسم (أو سيبه فارغ لزبون عابر)" value="${editing?(order.partyName||''):''}" oninput="onOrderClientInput()">
+        <input type="hidden" id="orderClientId" value="${editing?(order.partyId||''):''}">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>رقم الهاتف</label><input id="orderPhone" dir="ltr" value="${editing?(order.phone||''):''}" placeholder="06XXXXXXXX"></div>
+      <div class="field"><label>عنوان التسليم (اختياري)</label><input id="orderAddress" value="${editing?(order.address||''):''}" placeholder="الحي، الشارع..."></div>
+    </div>
+    <div id="orderLines"></div>
+    <button class="btn btn-outline btn-sm" onclick="addOrderLine()">+ زيد منتوج</button>
+    <div class="total-box"><span>المجموع</span><input id="orderTotal" type="number" min="0" step="0.01" class="amount" style="width:130px; text-align:left; background:transparent; border:1px solid var(--border); border-radius:8px; padding:4px 8px;" oninput="orderTotalTouched=true"></div>
+    <div class="field"><label>ملاحظات (اختياري)</label><input id="orderNotes" value="${editing?(order.notes||''):''}" placeholder="مثلا: يبغي التوصيل فالمسا"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-gold" onclick="saveOrder()">${editing?'حفظ التعديلات':'تسجيل الطلب'}</button>
+    </div>
+  `);
+  if(editing){
+    order.items.forEach(it=> addOrderLine(it));
+    updateOrderTotal();
+  } else {
+    addOrderLine();
+  }
+}
+function onOrderClientInput(){
+  const nameVal = document.getElementById('orderClientName').value.trim();
+  const match = state.clients.find(c=>c.name.trim().toLowerCase()===nameVal.toLowerCase());
+  document.getElementById('orderClientId').value = match ? match.id : '';
+  if(match && match.phone && !document.getElementById('orderPhone').value){
+    document.getElementById('orderPhone').value = match.phone;
+  }
+}
+function addOrderLine(preset){
+  const wrap = document.getElementById('orderLines');
+  const lid = uid('oln');
+  const div = document.createElement('div');
+  div.className='line-item';
+  div.id = lid;
+  div.innerHTML = `
+    <div class="field">
+      <label>المنتوج</label>
+      <input type="text" class="product-name-input" list="productsDatalist" placeholder="اكتب اسم المنتوج..." oninput="onOrderProductInput('${lid}')">
+      <input type="hidden" class="product-id-input">
+    </div>
+    <div class="field"><label>الكمية</label><input type="number" class="qty-input" min="1" placeholder="0" oninput="updateOrderTotal()"></div>
+    <div class="field"><label>الثمن للوحدة</label><input type="number" class="price-input" min="0" step="0.01" oninput="updateOrderTotal()"></div>
+    <div class="field"><label>المجموع</label><input type="text" class="total-input" disabled value="0.00"></div>
+    <button class="remove-line" onclick="removeOrderLine('${lid}')">✕</button>
+  `;
+  wrap.appendChild(div);
+  if(preset){
+    const prod = state.products.find(p=>p.id===preset.productId);
+    div.querySelector('.product-name-input').value = prod ? prod.name : (preset.name||'');
+    div.querySelector('.product-id-input').value = preset.productId;
+    div.querySelector('.qty-input').value = preset.qty;
+    div.querySelector('.price-input').value = preset.price.toFixed(2);
+  }
+  updateOrderTotal();
+}
+function onOrderProductInput(lid){
+  const div = document.getElementById(lid);
+  const nameInput = div.querySelector('.product-name-input');
+  const idInput = div.querySelector('.product-id-input');
+  const priceInput = div.querySelector('.price-input');
+  const typed = nameInput.value.trim().toLowerCase();
+  const prod = state.products.find(p=>p.name.trim().toLowerCase()===typed);
+  if(prod){
+    idInput.value = prod.id;
+    priceInput.value = prod.sellPrice.toFixed(2);
+  } else {
+    idInput.value = '';
+  }
+  updateOrderTotal();
+}
+function removeOrderLine(lid){
+  const el = document.getElementById(lid);
+  if(el) el.remove();
+  updateOrderTotal();
+}
+function updateOrderTotal(){
+  let total = 0;
+  document.querySelectorAll('#orderLines .line-item').forEach(div=>{
+    const qty = parseFloat(div.querySelector('.qty-input').value)||0;
+    const price = parseFloat(div.querySelector('.price-input').value)||0;
+    const sub = qty*price;
+    div.querySelector('.total-input').value = sub.toFixed(2);
+    total += sub;
+  });
+  const el = document.getElementById('orderTotal');
+  if(el && !orderTotalTouched) el.value = total.toFixed(2);
+}
+function saveOrder(){
+  const editId = document.getElementById('orderEditId').value;
+  const date = document.getElementById('orderDate').value || todayStr();
+  const clientId = document.getElementById('orderClientId').value;
+  const typedClientName = document.getElementById('orderClientName').value.trim();
+  const clientName = clientId ? state.clients.find(c=>c.id===clientId)?.name : (typedClientName || 'زبون عابر');
+  const phone = document.getElementById('orderPhone').value.trim();
+  const address = document.getElementById('orderAddress').value.trim();
+  const notes = document.getElementById('orderNotes').value.trim();
+  const items = [];
+  document.querySelectorAll('#orderLines .line-item').forEach(div=>{
+    const productId = div.querySelector('.product-id-input').value;
+    const qty = parseFloat(div.querySelector('.qty-input').value)||0;
+    const price = parseFloat(div.querySelector('.price-input').value)||0;
+    if(productId && qty>0){
+      const prod = state.products.find(p=>p.id===productId);
+      items.push({productId, name: prod?prod.name:'', qty, price, sub: qty*price});
+    }
+  });
+  if(!items.length){ alert('زيد على الأقل منتوج واحد (تأكد أنك اخترتي اسم موجود من القائمة)'); return; }
+  const total = parseFloat(document.getElementById('orderTotal').value)||0;
+  if(editId){
+    const order = state.orders.find(o=>o.id===editId);
+    if(!order){ closeModal(); return; }
+    order.date = date; order.partyId = clientId||null; order.partyName = clientName;
+    order.phone = phone; order.address = address; order.notes = notes;
+    order.items = items; order.total = total;
+    saveAll(['orders'], 'تم تعديل الطلب ✓');
+  } else {
+    state.orders.push({id:uid('or'), date, partyId: clientId||null, partyName: clientName, phone, address, notes, items, total, status:'جديد', saleId:null});
+    saveAll(['orders'], 'تم تسجيل الطلب ✓');
+  }
+  closeModal(); activeTab='orders'; render();
+}
+function openOrderDeliverModal(orderId){
+  const order = state.orders.find(o=>o.id===orderId);
+  if(!order) return;
+  showModal(`
+    <h2>تأكيد التسليم</h2>
+    <div class="sub">هاد الطلب غادي يتحول تلقائيا لبيع جديد ويدخل فالمبيعات، وغيتنقص الكمية من المخزون.</div>
+    <div class="field"><label>المبلغ المؤدى الآن</label><input id="orderDeliverPaid" type="number" min="0" step="0.01" value="${order.total}" placeholder="0.00"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-gold" onclick="confirmOrderDeliver('${orderId}')">✅ تأكيد التسليم</button>
+    </div>
+  `);
+}
+function confirmOrderDeliver(orderId){
+  const order = state.orders.find(o=>o.id===orderId);
+  if(!order) return;
+  const paid = parseFloat(document.getElementById('orderDeliverPaid').value)||0;
+  let stockProblem = false;
+  order.items.forEach(it=>{
+    const prod = state.products.find(p=>p.id===it.productId);
+    if(prod && prod.qty < it.qty) stockProblem = true;
+  });
+  const finalize = ()=>{
+    order.items.forEach(it=>{
+      const prod = state.products.find(p=>p.id===it.productId);
+      if(prod) prod.qty -= it.qty;
+    });
+    const payments = paid>0 ? [{date: todayStr(), amount: paid}] : [];
+    const saleId = uid('sl');
+    state.sales.push({id:saleId, date: todayStr(), partyId: order.partyId, partyName: order.partyName, items: order.items, total: order.total, paid, payments});
+    order.status = 'تم التسليم';
+    order.saleId = saleId;
+    saveAll(['products','sales','orders'], 'تم تسليم الطلب وتسجيله فالمبيعات ✓');
+    closeModal(); activeTab='sales'; render();
+  };
+  if(stockProblem){
+    showConfirmModal('الكمية المطلوبة كبر من المخزون ديال شي منتوج. بغيتي تكمل؟', finalize, '✅ نعم، كمل');
+  } else {
+    finalize();
+  }
+}
+function orderInvoiceMarkup(id){
+  const order = state.orders.find(o=>o.id===id);
+  if(!order) return null;
+  const s = state.settings;
+  const html = `
+    <div class="invoice-head">
+      ${s.logo?`<img src="${s.logo}" style="width:56px;height:56px;border-radius:12px;object-fit:cover;margin-bottom:8px;">`:''}
+      <h2><bdi>${s.shopName || 'دفتر التجارة'}</bdi></h2>
+      ${s.phone?`<p>${fmtPhone(s.phone)} 📞</p>`:''}
+      <p style="margin-top:8px;font-weight:700;">طلب زبون</p>
+      <p>الزبون: ${order.partyName || '—'} ${order.phone?('• '+order.phone):''} • التاريخ: ${fmtDate(order.date)}</p>
+      ${order.address?`<p>عنوان التسليم: ${order.address}</p>`:''}
+      <div style="margin-top:10px;">
+        <span style="display:inline-block;padding:5px 16px;border-radius:20px;background:var(--gold-soft);color:var(--gold);font-weight:700;font-size:13px;">${order.status}</span>
+      </div>
+    </div>
+    <table class="invoice-table"><thead><tr><th>المنتوج</th><th>الكمية</th><th>الثمن</th><th>المجموع</th></tr></thead>
+    <tbody>
+      ${order.items.map(it=>`<tr><td>${it.name}</td><td>${it.qty}</td><td>${money(it.price)}</td><td>${money(it.sub)}</td></tr>`).join('')}
+    </tbody></table>
+    <div class="invoice-total">المجموع الكلي: ${money(order.total)}</div>
+    ${order.notes?`<div style="margin-top:8px; color:var(--muted); font-size:13px;">ملاحظات: ${order.notes}</div>`:''}
+  `;
+  return {html, order, title:'طلب زبون'};
+}
+function viewOrderDetail(id){
+  const data = orderInvoiceMarkup(id);
+  if(!data) return;
+  const partyPart = (data.order.partyName||'طلب').replace(/\s+/g,'_');
+  const filenameBase = `طلب_${partyPart}_${data.order.date}`;
+  showModal(`
+    <div id="printArea">${data.html}</div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إغلاق</button>
+      <button class="btn btn-outline" onclick="window.print()">🖨️ طبع</button>
+      <button class="btn btn-green" id="shareOrderBtn" onclick="shareElementAsImage(orderInvoiceMarkup('${id}').html, '${filenameBase}', 'طلب زبون', 'shareOrderBtn')">📤 مشاركة</button>
+      <button class="btn btn-green" onclick="shareOrderWhatsapp('${id}')">🟢 واتساب</button>
+      <button class="btn btn-gold" id="prepareOrderDownloadBtn" onclick="downloadOrder('${id}')">⬇️ تحميل الطلب</button>
+    </div>
+    <div id="downloadLinkArea" style="margin-top:10px;"></div>
+  `);
+}
+async function downloadOrder(id){
+  const data = orderInvoiceMarkup(id);
+  if(!data) return;
+  const btn = document.getElementById('prepareOrderDownloadBtn');
+  const linkArea = document.getElementById('downloadLinkArea');
+  if(btn){ btn.disabled = true; btn.textContent = 'جاري التحضير...'; }
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'position:fixed; left:-9999px; top:0; width:400px; background:#ffffff; color:#161616; padding:22px; font-family:Tajawal,sans-serif; direction:rtl;';
+  wrapper.innerHTML = `<style>${SHARE_IMAGE_STYLE}</style>${data.html}`;
+  document.body.appendChild(wrapper);
+  try{
+    const canvas = await html2canvas(wrapper, {scale:2, backgroundColor:'#ffffff'});
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({unit:'pt', format:[canvas.width/2, canvas.height/2]});
+    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width/2, canvas.height/2);
+    const partyPart = (data.order.partyName||'طلب').replace(/\s+/g,'_');
+    const filename = `طلب_${partyPart}_${data.order.date}.pdf`;
+    const blob = pdf.output('blob');
+    const url = URL.createObjectURL(blob);
+    if(linkArea){
+      linkArea.innerHTML = `<a href="${url}" download="${filename}" class="btn btn-green" style="text-decoration:none; display:inline-block;">📥 اضغط هنا باش تحمل الطلب</a>`;
+    }
+    const tempA = document.createElement('a');
+    tempA.href = url; tempA.download = filename;
+    document.body.appendChild(tempA);
+    tempA.click();
+    document.body.removeChild(tempA);
+  }catch(e){
+    console.error(e);
+    if(linkArea) linkArea.innerHTML = `<span class="warn">تعذر تحضير الملف. جرب زر "طبع" وختار "حفظ كـ PDF".</span>`;
+  }finally{
+    document.body.removeChild(wrapper);
+    if(btn){ btn.disabled = false; btn.textContent = '⬇️ تحميل الطلب'; }
+  }
+}
+function shareOrderWhatsapp(id){
+  const order = state.orders.find(o=>o.id===id);
+  if(!order) return;
+  const s = state.settings;
+  const lines = [];
+  lines.push(`🧾 طلب من ${s.shopName || 'دفتر التجارة'}`);
+  lines.push(`الزبون: ${order.partyName || 'زبون عابر'}`);
+  lines.push(`التاريخ: ${fmtDate(order.date)}`);
+  if(order.address) lines.push(`عنوان التسليم: ${order.address}`);
+  lines.push('');
+  order.items.forEach(it=> lines.push(`- ${it.name} × ${it.qty} = ${money(it.sub)}`));
+  lines.push('');
+  lines.push(`المجموع: ${money(order.total)}`);
+  lines.push(`الحالة: ${order.status}`);
+  if(order.notes) lines.push(`ملاحظات: ${order.notes}`);
+  const text = encodeURIComponent(lines.join('\n'));
+  const cleanPhone = (order.phone||'').replace(/[^0-9]/g,'');
+  const waPhone = cleanPhone ? (cleanPhone.startsWith('0') ? '212'+cleanPhone.slice(1) : cleanPhone) : '';
+  const url = waPhone ? `https://wa.me/${waPhone}?text=${text}` : `https://wa.me/?text=${text}`;
+  window.open(url, '_blank');
+}
+
+function renderSales(){
+  if(!state.sales.length) return emptyPanel('المبيعات', 'مازال ما ديرتي حتى بيع. اضغط على "بيع جديد" باش تبدا.');
+  const rows = [...state.sales].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(s=>{
+    const remaining = saleRemaining(s);
+    return `<tr>
+      <td>${fmtDate(s.date)}</td>
+      <td>${s.partyName || 'زبون عابر'}</td>
+      <td>${s.items.length} منتوج</td>
+      <td>${money(s.total)}</td>
+      <td>${debtBadge(remaining)}</td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="viewInvoice('sale','${s.id}')">الفاتورة</button>
+        <button class="btn btn-outline btn-sm" onclick="openSaleModal('${s.id}')">✏️ تعديل</button>
+        ${remaining>0?`<button class="btn btn-gold btn-sm" onclick="openPayModal('sale','${s.id}')">💵 دفع نقدي</button>`:''}
+        <button class="btn btn-danger btn-sm" onclick="deleteRecord('sales','${s.id}')">حذف</button>
+      </td>
+    </tr>`;}).join('');
+  return panelTable('المبيعات', ['التاريخ','الزبون','عدد المنتوجات','المجموع','الباقي',''], rows);
+}
+function renderPurchases(){
+  if(!state.purchases.length) return emptyPanel('المشتريات', 'مازال ما ديرتي حتى شراء. اضغط على "شراء جديد" باش تبدا.');
+  const rows = [...state.purchases].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(p=>{
+    const remaining = purchRemaining(p);
+    return `<tr>
+      <td>${fmtDate(p.date)}</td>
+      <td>${p.partyName || '—'}</td>
+      <td>${p.items.length} منتوج</td>
+      <td>${money(p.total)}</td>
+      <td>${debtBadge(remaining)}</td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="viewInvoice('purchase','${p.id}')">التفاصيل</button>
+        <button class="btn btn-outline btn-sm" onclick="openPurchaseModal('${p.id}')">✏️ تعديل</button>
+        ${remaining>0?`<button class="btn btn-gold btn-sm" onclick="openPayModal('purchase','${p.id}')">💵 دفع نقدي</button>`:''}
+        <button class="btn btn-danger btn-sm" onclick="deleteRecord('purchases','${p.id}')">حذف</button>
+      </td>
+    </tr>`;}).join('');
+  return panelTable('المشتريات', ['التاريخ','المورد','عدد المنتوجات','المجموع','الباقي',''], rows);
+}
+function buildClientsListHtml(){
+  const term = (clientSearch||'').trim().toLowerCase();
+  const list = term ? state.clients.filter(c=>c.name.toLowerCase().includes(term)) : state.clients;
+  if(!state.clients.length) return `<div class="empty-row">مازال ما زدتي حتى زبون. اضغط على "زبون جديد".</div>`;
+  if(!list.length) return `<div class="empty-row">ما لقيتش شي زبون بهاد الاسم</div>`;
+  const rows = list.map(c=>{
+    const clientSales = state.sales.filter(s=>s.partyId===c.id);
+    const debt = clientDebtTotal(c.id);
+    return `<tr>
+      <td>${c.name}</td>
+      <td>${c.phone?fmtPhone(c.phone):'—'}</td>
+      <td>${clientSales.length}</td>
+      <td>${debtBadge(debt)}</td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="viewPartyDetail('client','${c.id}')">عرض</button>
+        <button class="btn btn-outline btn-sm" onclick="openClientModal('${c.id}')">✏️ تعديل</button>
+        ${debt>0?`<button class="btn btn-gold btn-sm" onclick="openPartyPayModal('client','${c.id}')">💵 تسديد</button>`:''}
+        <button class="btn btn-danger btn-sm" onclick="deleteRecord('clients','${c.id}')">حذف</button>
+      </td>
+    </tr>`;
+  }).join('');
+  return `<div class="table-scroll"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>عدد المشتريات</th><th>الدين</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function refreshClientsList(){
+  clientSearch = document.getElementById('clientSearchInput').value;
+  document.getElementById('clientsListArea').innerHTML = buildClientsListHtml();
+}
+function renderClients(){
+  return `<div class="panel">
+    <div class="section-title">الزبناء</div>
+    ${state.clients.length ? `<div class="field"><input id="clientSearchInput" type="search" placeholder="🔍 بحث باسم الزبون..." value="${clientSearch}" oninput="refreshClientsList()"></div>` : ''}
+    <div id="clientsListArea">${buildClientsListHtml()}</div>
+  </div>`;
+}
+function buildSuppliersListHtml(){
+  const term = (supplierSearch||'').trim().toLowerCase();
+  const list = term ? state.suppliers.filter(s=>s.name.toLowerCase().includes(term)) : state.suppliers;
+  if(!state.suppliers.length) return `<div class="empty-row">مازال ما زدتي حتى مورد. اضغط على "مورد جديد".</div>`;
+  if(!list.length) return `<div class="empty-row">ما لقيتش شي مورد بهاد الاسم</div>`;
+  const rows = list.map(s=>{
+    const supplyPurchases = state.purchases.filter(p=>p.partyId===s.id);
+    const debt = supplierDebtTotal(s.id);
+    return `<tr>
+      <td>${s.name}</td>
+      <td>${s.phone?fmtPhone(s.phone):'—'}</td>
+      <td>${supplyPurchases.length}</td>
+      <td>${debtBadge(debt)}</td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="viewPartyDetail('supplier','${s.id}')">عرض</button>
+        <button class="btn btn-outline btn-sm" onclick="openSupplierModal('${s.id}')">✏️ تعديل</button>
+        ${debt>0?`<button class="btn btn-gold btn-sm" onclick="openPartyPayModal('supplier','${s.id}')">💵 تسديد</button>`:''}
+        <button class="btn btn-danger btn-sm" onclick="deleteRecord('suppliers','${s.id}')">حذف</button>
+      </td>
+    </tr>`;
+  }).join('');
+  return `<div class="table-scroll"><table><thead><tr><th>الاسم</th><th>الهاتف</th><th>عدد التوريدات</th><th>الدين</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function refreshSuppliersList(){
+  supplierSearch = document.getElementById('supplierSearchInput').value;
+  document.getElementById('suppliersListArea').innerHTML = buildSuppliersListHtml();
+}
+function renderSuppliers(){
+  return `<div class="panel">
+    <div class="section-title">الموردين</div>
+    ${state.suppliers.length ? `<div class="field"><input id="supplierSearchInput" type="search" placeholder="🔍 بحث باسم المورد..." value="${supplierSearch}" oninput="refreshSuppliersList()"></div>` : ''}
+    <div id="suppliersListArea">${buildSuppliersListHtml()}</div>
+  </div>`;
+}
+function viewPartyDetail(kind, partyId){
+  const isClient = kind==='client';
+  const party = isClient ? state.clients.find(c=>c.id===partyId) : state.suppliers.find(s=>s.id===partyId);
+  if(!party) return;
+  const records = (isClient ? state.sales : state.purchases)
+    .filter(r=>r.partyId===partyId);
+  const openingItems = state.openingBalances.filter(o=>o.kind===kind && o.partyId===partyId);
+  const debt = isClient ? clientDebtTotal(partyId) : supplierDebtTotal(partyId);
+  const totalAmount = records.reduce((sum,r)=>sum+r.total,0) + openingItems.reduce((sum,o)=>sum+o.total,0);
+  const label = isClient ? 'الزبون' : 'المورد';
+  const invoiceRows = records.map(r=>{
+    const rem = isClient ? saleRemaining(r) : purchRemaining(r);
+    return `<tr>
+      <td>${fmtDate(r.date)}</td>
+      <td>فاتورة</td>
+      <td>${money(r.total)}</td>
+      <td>${debtBadge(rem)}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="viewInvoice('${isClient?'sale':'purchase'}','${r.id}')">${isClient?'الفاتورة':'التفاصيل'}</button></td>
+    </tr>`;
+  });
+  const obRows = openingItems.map(o=>{
+    const rem = obRemaining(o);
+    return `<tr>
+      <td>${fmtDate(o.date)}</td>
+      <td>رصيد سابق${o.note?(' • '+o.note):''}</td>
+      <td>${money(o.total)}</td>
+      <td>${debtBadge(rem)}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteRecord('openingBalances','${o.id}')">حذف</button></td>
+    </tr>`;
+  });
+  const rows = invoiceRows.concat(obRows).join('');
+  const count = records.length + openingItems.length;
+  showModal(`
+    <h2>${party.name}</h2>
+    <div class="sub">${label} ${party.phone?('• '+fmtPhone(party.phone)+' 📞'):''} • عدد العمليات: ${count} • مجموع المبالغ: ${money(totalAmount)}</div>
+    <div class="total-box"><span>الدين الحالي</span><span class="amount" style="color:${debt>0?'var(--red)':'var(--green)'}">${money(debt)}</span></div>
+    ${count ? `<div class="table-scroll"><table><thead><tr><th>التاريخ</th><th>النوع</th><th>المبلغ</th><th>الباقي</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
+      : `<div class="empty-row">ما كاين حتى عملية بعد</div>`}
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إغلاق</button>
+      <button class="btn btn-outline" onclick="openPartyEditModal('${kind}','${partyId}')">✏️ تعديل</button>
+      <button class="btn btn-outline" onclick="openOpeningBalanceModal('${kind}','${partyId}')">➕ دين سابق</button>
+      <button class="btn btn-green" id="sharePartyBtn" onclick="sharePartyDebt('${kind}','${partyId}')">📤 مشاركة</button>
+      ${debt>0?`<button class="btn btn-gold" onclick="openPartyPayModal('${kind}','${partyId}')">💵 تسديد دين</button>`:''}
+    </div>
+  `);
+}
+function partyDebtShareMarkup(kind, partyId){
+  const isClient = kind==='client';
+  const party = isClient ? state.clients.find(c=>c.id===partyId) : state.suppliers.find(s=>s.id===partyId);
+  if(!party) return null;
+  const records = (isClient ? state.sales : state.purchases).filter(r=>r.partyId===partyId);
+  const openingItems = state.openingBalances.filter(o=>o.kind===kind && o.partyId===partyId);
+  const debt = isClient ? clientDebtTotal(partyId) : supplierDebtTotal(partyId);
+  const label = isClient ? 'الزبون' : 'المورد';
+  const s = state.settings;
+  const unpaidRows = records.filter(r=>(isClient?saleRemaining(r):purchRemaining(r))>0.001).map(r=>{
+    const rem = isClient?saleRemaining(r):purchRemaining(r);
+    return `<tr><td>${fmtDate(r.date)}</td><td>فاتورة</td><td>${money(r.total)}</td><td>${money(rem)}</td></tr>`;
+  });
+  const unpaidOb = openingItems.filter(o=>obRemaining(o)>0.001).map(o=>{
+    return `<tr><td>${fmtDate(o.date)}</td><td>رصيد سابق</td><td>${money(o.total)}</td><td>${money(obRemaining(o))}</td></tr>`;
+  });
+  const rows = unpaidRows.concat(unpaidOb).join('');
+  const html = `
+    <div class="invoice-head">
+      ${s.logo?`<img src="${s.logo}" style="width:56px;height:56px;border-radius:12px;object-fit:cover;margin-bottom:8px;">`:''}
+      <h2><bdi>${s.shopName || 'دفتر التجارة'}</bdi></h2>
+      ${s.phone?`<p>${fmtPhone(s.phone)} 📞</p>`:''}
+      <p style="margin-top:8px;font-weight:700;">كشف حساب</p>
+      <p>${label}: <bdi>${party.name}</bdi> ${party.phone?('• '+fmtPhone(party.phone)):''}</p>
+    </div>
+    <div class="share-total-box"><span>الدين الحالي</span><span class="amount">${money(debt)}</span></div>
+    ${rows ? `<table><thead><tr><th>التاريخ</th><th>النوع</th><th>المبلغ</th><th>الباقي</th></tr></thead><tbody>${rows}</tbody></table>` : ''}
+  `;
+  return {html, party, title:'كشف_حساب'};
+}
+function sharePartyDebt(kind, partyId){
+  const data = partyDebtShareMarkup(kind, partyId);
+  if(!data) return;
+  const filenameBase = `${data.title}_${data.party.name.replace(/\s+/g,'_')}`;
+  shareElementAsImage(data.html, filenameBase, 'كشف حساب', 'sharePartyBtn');
+}
+function openPartyEditModal(kind, partyId){
+  if(kind==='client') openClientModal(partyId);
+  else openSupplierModal(partyId);
+}
+function openOpeningBalanceModal(kind, partyId){
+  const isClient = kind==='client';
+  const list = isClient ? state.clients : state.suppliers;
+  const party = partyId ? list.find(x=>x.id===partyId) : null;
+  const partySelect = list.map(x=>`<option value="${x.id}" ${party&&x.id===party.id?'selected':''}>${x.name}</option>`).join('');
+  showModal(`
+    <h2>إضافة دين سابق</h2>
+    <div class="sub">باش تسجل دين كان كاين قبل ما تبدا تستعمل التطبيق</div>
+    <div class="field"><label>النوع</label>
+      <select id="obKind" onchange="refreshOpeningBalancePartyList()">
+        <option value="client" ${isClient?'selected':''}>زبون</option>
+        <option value="supplier" ${!isClient?'selected':''}>مورد</option>
+      </select>
+    </div>
+    <div class="field"><label>${isClient?'الزبون':'المورد'}</label>
+      <select id="obParty">${partySelect || '<option value="">— زيد زبون/مورد أولا —</option>'}</select>
+    </div>
+    <div class="field"><label>مبلغ الدين</label><input id="obAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+    <div class="field"><label>ملاحظة (اختياري)</label><input id="obNote" placeholder="مثلا: رصيد قبل استعمال التطبيق"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-gold" onclick="saveOpeningBalance()">حفظ الدين السابق</button>
+    </div>
+  `);
+}
+function refreshOpeningBalancePartyList(){
+  const kind = document.getElementById('obKind').value;
+  const isClient = kind==='client';
+  const list = isClient ? state.clients : state.suppliers;
+  const partySelect = document.getElementById('obParty');
+  partySelect.innerHTML = list.map(x=>`<option value="${x.id}">${x.name}</option>`).join('') || '<option value="">— زيد زبون/مورد أولا —</option>';
+}
+function saveOpeningBalance(){
+  const kind = document.getElementById('obKind').value;
+  const partyId = document.getElementById('obParty').value;
+  const amount = parseFloat(document.getElementById('obAmount').value)||0;
+  const note = document.getElementById('obNote').value.trim();
+  if(!partyId){ alert('خاصك تختار زبون أو مورد'); return; }
+  if(amount<=0){ alert('دخل مبلغ صحيح'); return; }
+  const isClient = kind==='client';
+  const party = isClient ? state.clients.find(c=>c.id===partyId) : state.suppliers.find(s=>s.id===partyId);
+  state.openingBalances.push({
+    id: uid('ob'), kind, partyId, partyName: party?party.name:'', total: amount, paid: 0, payments: [],
+    date: todayStr(), note: note || 'رصيد قبل استعمال التطبيق'
+  });
+  saveAll(['openingBalances'], 'تم تسجيل الدين السابق ✓');
+  closeModal(); activeTab='debts'; render();
+}
+function buildProductsListHtml(){
+  const term = (productSearch||'').trim().toLowerCase();
+  const list = term ? state.products.filter(p=>p.name.toLowerCase().includes(term)) : state.products;
+  if(!state.products.length) return `<div class="empty-row">مازال ما زدتي حتى منتوج. اضغط على "منتوج جديد".</div>`;
+  if(!list.length) return `<div class="empty-row">ما لقيتش شي منتوج بهاد الاسم</div>`;
+  const rows = list.map(p=>`
+    <tr>
+      <td>${p.name}</td>
+      <td>${money(p.buyPrice)}</td>
+      <td>${money(p.sellPrice)}</td>
+      <td>${p.qty} <span class="badge ${p.qty<=5?'low':'ok'}">${p.qty<=5?'ناقص':'متوفر'}</span></td>
+      <td><button class="btn btn-outline btn-sm" onclick="openProductModal('${p.id}')">✏️ تعديل</button></td>
+    </tr>`).join('');
+  return `<div class="table-scroll"><table><thead><tr><th>الاسم</th><th>سعر الشراء</th><th>سعر البيع</th><th>المخزون</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function refreshProductsList(){
+  productSearch = document.getElementById('productSearchInput').value;
+  document.getElementById('productsListArea').innerHTML = buildProductsListHtml();
+}
+function renderProducts(){
+  return `<div class="panel">
+    <div class="section-title">المنتوجات</div>
+    ${state.products.length ? `<div class="field"><input id="productSearchInput" type="search" placeholder="🔍 بحث باسم المنتوج..." value="${productSearch}" oninput="refreshProductsList()"></div>` : ''}
+    <div id="productsListArea">${buildProductsListHtml()}</div>
+  </div>`;
+}
+function panelTable(title, headers, rows){
+  return `<div class="panel">
+    <div class="section-title">${title}</div>
+    <div class="table-scroll">
+    <table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${rows}</tbody></table>
+    </div>
+  </div>`;
+}
+function emptyPanel(title, msg){
+  return `<div class="panel">
+    <div class="section-title">${title}</div>
+    <div class="empty-row">${msg}</div>
+  </div>`;
+}
+
+function renderDebts(){
+  const clientDebts = state.clients.map(c=>{
+    return {id:c.id, name:c.name, phone:c.phone, debt: clientDebtTotal(c.id)};
+  }).filter(x=>x.debt>0.001).sort((a,b)=>b.debt-a.debt);
+
+  const supplierDebts = state.suppliers.map(s=>{
+    return {id:s.id, name:s.name, phone:s.phone, debt: supplierDebtTotal(s.id)};
+  }).filter(x=>x.debt>0.001).sort((a,b)=>b.debt-a.debt);
+
+  const totalClientDebt = clientDebts.reduce((s,x)=>s+x.debt,0);
+  const totalSupplierDebt = supplierDebts.reduce((s,x)=>s+x.debt,0);
+
+  return `
+    <div class="grid-stats">
+      <div class="stat-card ${totalClientDebt>0?'red':''}"><div class="label">مجموع ديون الزبناء عندنا</div><div class="value">${money(totalClientDebt)}</div></div>
+      <div class="stat-card ${totalSupplierDebt>0?'red':''}"><div class="label">مجموع ديوننا عند الموردين</div><div class="value">${money(totalSupplierDebt)}</div></div>
+    </div>
+    <button class="btn btn-outline btn-sm" style="margin-bottom:14px;" onclick="openOpeningBalanceModal('client', null)">➕ إضافة دين سابق (قبل استعمال التطبيق)</button>
+    <div class="panel">
+      <div class="section-title">الزبناء المديونين</div>
+      ${clientDebts.length ? `<div class="table-scroll"><table><thead><tr><th>الزبون</th><th>الهاتف</th><th>الدين</th><th></th></tr></thead><tbody>
+        ${clientDebts.map(c=>`<tr>
+          <td>${c.name}</td><td>${c.phone?fmtPhone(c.phone):'—'}</td><td><span class="badge low">${money(c.debt)}</span></td>
+          <td><button class="btn btn-gold btn-sm" onclick="openPartyPayModal('client','${c.id}')">💵 تسجيل دفعة</button></td>
+        </tr>`).join('')}
+      </tbody></table></div>` : `<div class="empty-row">ما كاين حتى زبون عندو دين حاليا 👍</div>`}
+    </div>
+    <div class="panel">
+      <div class="section-title">الديون عند الموردين</div>
+      ${supplierDebts.length ? `<div class="table-scroll"><table><thead><tr><th>المورد</th><th>الهاتف</th><th>الدين</th><th></th></tr></thead><tbody>
+        ${supplierDebts.map(s=>`<tr>
+          <td>${s.name}</td><td>${s.phone?fmtPhone(s.phone):'—'}</td><td><span class="badge low">${money(s.debt)}</span></td>
+          <td><button class="btn btn-gold btn-sm" onclick="openPartyPayModal('supplier','${s.id}')">💵 تسجيل دفعة</button></td>
+        </tr>`).join('')}
+      </tbody></table></div>` : `<div class="empty-row">ما كاين حتى دين عند شي مورد حاليا 👍</div>`}
+    </div>
+  `;
+}
+function openPartyPayModal(kind, partyId){
+  const isClient = kind==='client';
+  const party = isClient ? state.clients.find(c=>c.id===partyId) : state.suppliers.find(s=>s.id===partyId);
+  if(!party) return;
+  const totalDebt = isClient ? clientDebtTotal(partyId) : supplierDebtTotal(partyId);
+  showModal(`
+    <h2>تسجيل دفعة على الحساب</h2>
+    <div class="sub">${isClient?'الزبون':'المورد'}: ${party.name} • الدين الحالي: ${money(totalDebt)}</div>
+    <div class="field"><label>المبلغ المدفوع</label><input id="partyPayAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+    <div class="field"><label>تاريخ الدفعة</label><input id="partyPayDate" type="date" value="${todayStr()}"></div>
+    <div class="warn">الدفعة غادي تتوزع تلقائيا على أقدم الديون أولا (بما فيها الرصيد السابق)</div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-gold" onclick="confirmPartyPay('${kind}','${partyId}')">💵 تسجيل الدفعة</button>
+    </div>
+  `);
+}
+function confirmPartyPay(kind, partyId){
+  const isClient = kind==='client';
+  let amt = parseFloat(document.getElementById('partyPayAmount').value)||0;
+  const date = document.getElementById('partyPayDate').value || todayStr();
+  if(amt<=0){ alert('دخل مبلغ صحيح'); return; }
+  const records = isClient ? state.sales : state.purchases;
+  const unpaidRecords = records.filter(r=>r.partyId===partyId && (isClient?saleRemaining(r):purchRemaining(r))>0.001)
+                                .map(r=>({rec:r, date:r.date, remaining: isClient?saleRemaining(r):purchRemaining(r)}));
+  const unpaidOpening = state.openingBalances.filter(o=>o.kind===kind && o.partyId===partyId && obRemaining(o)>0.001)
+                                .map(o=>({rec:o, date:o.date, remaining: obRemaining(o)}));
+  const queue = unpaidRecords.concat(unpaidOpening).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const touchedRecordKeys = new Set();
+  for(const item of queue){
+    if(amt<=0) break;
+    const pay = Math.min(amt, item.remaining);
+    item.rec.paid = (item.rec.paid!=null ? item.rec.paid : 0) + pay;
+    if(!item.rec.payments) item.rec.payments = [];
+    item.rec.payments.push({date, amount:pay});
+    amt -= pay;
+    touchedRecordKeys.add(unpaidRecords.includes(item) ? (isClient?'sales':'purchases') : 'openingBalances');
+  }
+  saveAll(Array.from(touchedRecordKeys.size ? touchedRecordKeys : [isClient?'sales':'purchases']), 'تم تسجيل الدفعة ✓');
+  closeModal(); activeTab='debts'; render();
+}
+
+let pendingConfirmAction = null;
+function showConfirmModal(message, action, confirmLabel){
+  pendingConfirmAction = action;
+  showModal(`
+    <h2>تأكيد</h2>
+    <div class="sub">${message}</div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="pendingConfirmAction=null; closeModal()">إلغاء</button>
+      <button class="btn btn-danger" onclick="runConfirmedAction()">${confirmLabel||'تأكيد'}</button>
+    </div>
+  `);
+}
+function runConfirmedAction(){
+  const action = pendingConfirmAction;
+  pendingConfirmAction = null;
+  if(action) action();
+}
+function deleteRecord(collection, id){
+  showConfirmModal('واخا تحيد هاد السطر؟ ماغاديش تقدر ترجعو.', ()=>{
+    state[collection] = state[collection].filter(x=>x.id!==id);
+    saveAll([collection], 'تم الحذف ✓');
+    closeModal();
+    render();
+  }, '🗑️ نعم، حذف');
+}
+
+/* ---------- Modal helpers ---------- */
+function showModal(html){
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('overlay').classList.add('show');
+}
+function closeModal(){
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('modalBody').innerHTML = '';
+}
+document.getElementById('overlay').addEventListener('click', (e)=>{
+  if(e.target.id==='overlay') closeModal();
+});
+
+/* ---------- Client / Supplier modals ---------- */
+function openClientModal(editId){
+  const editing = !!editId;
+  const c = editing ? state.clients.find(x=>x.id===editId) : null;
+  showModal(`
+    <h2>${editing?'تعديل الزبون':'زبون جديد'}</h2>
+    <div class="sub">${editing?'عدل معلومات الزبون':'زيد زبون جديد باش تقدر تختارو ملي كتدير بيع'}</div>
+    <input type="hidden" id="cEditId" value="${editing?c.id:''}">
+    <div class="field"><label>الاسم</label><input id="cName" value="${editing?c.name:''}" placeholder="مثلا: أحمد بنعلي"></div>
+    <div class="field"><label>الهاتف (اختياري)</label><input id="cPhone" dir="ltr" value="${editing?(c.phone||''):''}" placeholder="06XXXXXXXX"></div>
+    ${editing?'':`<div class="field"><label>دين سابق قبل استعمال التطبيق (اختياري)</label><input id="cOpeningDebt" type="number" min="0" step="0.01" placeholder="0.00"></div>`}
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-gold" onclick="saveClient()">${editing?'حفظ التعديلات':'حفظ الزبون'}</button>
+    </div>
+  `);
+}
+function saveClient(){
+  const editId = document.getElementById('cEditId').value;
+  const name = document.getElementById('cName').value.trim();
+  if(!name){ alert('خاصك تكتب الاسم'); return; }
+  const phone = document.getElementById('cPhone').value.trim();
+  if(editId){
+    const c = state.clients.find(x=>x.id===editId);
+    if(c){ c.name=name; c.phone=phone; }
+    saveAll(['clients'], 'تم تعديل الزبون ✓');
+  } else {
+    const newClient = {id:uid('c'), name, phone};
+    state.clients.push(newClient);
+    const openingDebtInput = document.getElementById('cOpeningDebt');
+    const openingDebt = openingDebtInput ? (parseFloat(openingDebtInput.value)||0) : 0;
+    if(openingDebt>0){
+      state.openingBalances.push({
+        id: uid('ob'), kind:'client', partyId:newClient.id, partyName:newClient.name,
+        total: openingDebt, paid:0, payments:[], date: todayStr(), note: 'رصيد قبل استعمال التطبيق'
+      });
+      saveAll(['clients','openingBalances'], 'تم حفظ الزبون والدين السابق ✓');
+    } else {
+      saveAll(['clients'], 'تم حفظ الزبون ✓');
+    }
+  }
+  closeModal(); activeTab='clients'; render();
+}
+function openSupplierModal(editId){
+  const editing = !!editId;
+  const s = editing ? state.suppliers.find(x=>x.id===editId) : null;
+  showModal(`
+    <h2>${editing?'تعديل المورد':'مورد جديد'}</h2>
+    <div class="sub">${editing?'عدل معلومات المورد':'زيد مورد جديد باش تقدر تختارو ملي كتدير شراء'}</div>
+    <input type="hidden" id="sEditId" value="${editing?s.id:''}">
+    <div class="field"><label>الاسم</label><input id="sName" value="${editing?s.name:''}" placeholder="مثلا: شركة الأطلس للتوزيع"></div>
+    <div class="field"><label>الهاتف (اختياري)</label><input id="sPhone" dir="ltr" value="${editing?(s.phone||''):''}" placeholder="05XXXXXXXX"></div>
+    ${editing?'':`<div class="field"><label>دين سابق قبل استعمال التطبيق (اختياري)</label><input id="sOpeningDebt" type="number" min="0" step="0.01" placeholder="0.00"></div>`}
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-gold" onclick="saveSupplier()">${editing?'حفظ التعديلات':'حفظ المورد'}</button>
+    </div>
+  `);
+}
+function saveSupplier(){
+  const editId = document.getElementById('sEditId').value;
+  const name = document.getElementById('sName').value.trim();
+  if(!name){ alert('خاصك تكتب الاسم'); return; }
+  const phone = document.getElementById('sPhone').value.trim();
+  if(editId){
+    const s = state.suppliers.find(x=>x.id===editId);
+    if(s){ s.name=name; s.phone=phone; }
+    saveAll(['suppliers'], 'تم تعديل المورد ✓');
+  } else {
+    const newSupplier = {id:uid('s'), name, phone};
+    state.suppliers.push(newSupplier);
+    const openingDebtInput = document.getElementById('sOpeningDebt');
+    const openingDebt = openingDebtInput ? (parseFloat(openingDebtInput.value)||0) : 0;
+    if(openingDebt>0){
+      state.openingBalances.push({
+        id: uid('ob'), kind:'supplier', partyId:newSupplier.id, partyName:newSupplier.name,
+        total: openingDebt, paid:0, payments:[], date: todayStr(), note: 'رصيد قبل استعمال التطبيق'
+      });
+      saveAll(['suppliers','openingBalances'], 'تم حفظ المورد والدين السابق ✓');
+    } else {
+      saveAll(['suppliers'], 'تم حفظ المورد ✓');
+    }
+  }
+  closeModal(); activeTab='suppliers'; render();
+}
+function openProductModal(editId){
+  const editing = !!editId;
+  const p = editing ? state.products.find(x=>x.id===editId) : null;
+  showModal(`
+    <h2>${editing?'تعديل المنتوج':'منتوج جديد'}</h2>
+    <div class="sub">${editing?'عدل معلومات المنتوج':'زيد منتوج جديد للمخزون ديالك'}</div>
+    <input type="hidden" id="pEditId" value="${editing?p.id:''}">
+    <div class="field"><label>اسم المنتوج</label><input id="pName" value="${editing?p.name:''}" placeholder="مثلا: زيت العافية 1 لتر"></div>
+    <div class="row2">
+      <div class="field"><label>سعر الشراء</label><input id="pBuy" type="number" min="0" step="0.01" value="${editing?p.buyPrice:''}" placeholder="0.00"></div>
+      <div class="field"><label>سعر البيع</label><input id="pSell" type="number" min="0" step="0.01" value="${editing?p.sellPrice:''}" placeholder="0.00"></div>
+    </div>
+    <div class="field"><label>الكمية الحالية بالمخزون</label><input id="pQty" type="number" min="0" step="1" value="${editing?p.qty:''}" placeholder="0"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-gold" onclick="saveProduct()">${editing?'حفظ التعديلات':'حفظ المنتوج'}</button>
+    </div>
+  `);
+}
+function saveProduct(){
+  const editId = document.getElementById('pEditId').value;
+  const name = document.getElementById('pName').value.trim();
+  const buyPrice = parseFloat(document.getElementById('pBuy').value)||0;
+  const sellPrice = parseFloat(document.getElementById('pSell').value)||0;
+  const qty = parseInt(document.getElementById('pQty').value)||0;
+  if(!name){ alert('خاصك تكتب اسم المنتوج'); return; }
+  if(editId){
+    const p = state.products.find(x=>x.id===editId);
+    if(p){ p.name=name; p.buyPrice=buyPrice; p.sellPrice=sellPrice; p.qty=qty; }
+    saveAll(['products'], 'تم تعديل المنتوج ✓');
+  } else {
+    state.products.push({id:uid('p'), name, buyPrice, sellPrice, qty});
+    saveAll(['products'], 'تم حفظ المنتوج ✓');
+  }
+  closeModal(); activeTab='products'; render();
+}
+
+/* ---------- Sale / Purchase modals ---------- */
+function datalistOptionsHtml(id, names){
+  return `<datalist id="${id}">${names.map(n=>`<option value="${n}">`).join('')}</datalist>`;
+}
+
+function openSaleModal(editId){
+  if(!state.products.length){ alert('خاصك تزيد منتوج بور اش تقدر تدير بيع'); openProductModal(); return; }
+  saleTotalTouched = false;
+  const editing = !!editId;
+  const sale = editing ? state.sales.find(s=>s.id===editId) : null;
+  showModal(`
+    <h2>${editing?'تعديل البيع':'بيع جديد'}</h2>
+    <div class="sub">${editing?'صحح المنتوجات، الكمية، ولا الزبون فهاد الفاتورة':'اكتب اسم الزبون والمنتوجات، والمجموع غادي يتحسب وحدو'}</div>
+    <input type="hidden" id="saleEditId" value="${editing?sale.id:''}">
+    ${datalistOptionsHtml('clientsDatalist', state.clients.map(c=>c.name))}
+    ${datalistOptionsHtml('productsDatalist', state.products.map(p=>p.name))}
+    <div class="row2">
+      <div class="field"><label>التاريخ</label><input id="saleDate" type="date" value="${editing?sale.date:todayStr()}"></div>
+      <div class="field"><label>الزبون</label>
+        <input type="text" id="saleClientName" list="clientsDatalist" placeholder="اكتب الاسم (أو سيبه فارغ لزبون عابر)" oninput="onSaleClientInput()">
+        <input type="hidden" id="saleClientId">
+      </div>
+    </div>
+    <div id="saleLines"></div>
+    <button class="btn btn-outline btn-sm" onclick="addSaleLine()">+ زيد منتوج</button>
+    <div class="total-box"><span>المجموع</span><input id="saleTotal" type="number" min="0" step="0.01" class="amount" style="width:130px; text-align:left; background:transparent; border:1px solid var(--border); border-radius:8px; padding:4px 8px;" oninput="saleTotalTouched=true; updateSalePreview()"></div>
+    ${editing ? `<div class="warn">المبلغ المؤدى (${money(sale.paid!=null?sale.paid:sale.total)}) ما كيتبدلش من هنا — استعمل زر "دفع نقدي" فالجدول باش تسدد.</div>`
+      : `<div class="field"><label>المبلغ المؤدى الآن</label><input id="salePaid" type="number" min="0" step="0.01" placeholder="0.00" oninput="updateSalePreview()"></div>
+         <div class="warn" id="saleRemainingPreview"></div>`}
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-gold" onclick="saveSale()">${editing?'حفظ التعديلات':'تسجيل البيع'}</button>
+    </div>
+  `);
+  if(editing){
+    if(sale.partyId){
+      document.getElementById('saleClientName').value = sale.partyName || '';
+      document.getElementById('saleClientId').value = sale.partyId;
+    } else if(sale.partyName && sale.partyName !== 'زبون عابر'){
+      document.getElementById('saleClientName').value = sale.partyName;
+    }
+    sale.items.forEach(it=> addSaleLine(it));
+    updateSaleTotal();
+  } else {
+    addSaleLine();
+  }
+}
+function onSaleClientInput(){
+  const nameVal = document.getElementById('saleClientName').value.trim();
+  const match = state.clients.find(c=>c.name.trim().toLowerCase()===nameVal.toLowerCase());
+  document.getElementById('saleClientId').value = match ? match.id : '';
+}
+function addSaleLine(preset){
+  const wrap = document.getElementById('saleLines');
+  const lid = uid('ln');
+  const div = document.createElement('div');
+  div.className='line-item';
+  div.id = lid;
+  div.innerHTML = `
+    <div class="field">
+      <label>المنتوج</label>
+      <input type="text" class="product-name-input" list="productsDatalist" placeholder="اكتب اسم المنتوج..." oninput="onSaleProductInput('${lid}')">
+      <input type="hidden" class="product-id-input">
+    </div>
+    <div class="field"><label>الكمية</label><input type="number" class="qty-input" min="1" placeholder="0" oninput="updateSaleTotal()"></div>
+    <div class="field"><label>الثمن للوحدة</label><input type="number" class="price-input" min="0" step="0.01" oninput="updateSaleTotal()"></div>
+    <div class="field"><label>المجموع</label><input type="text" class="total-input" disabled value="0.00"></div>
+    <button class="remove-line" onclick="removeLine('${lid}')">✕</button>
+  `;
+  wrap.appendChild(div);
+  if(preset){
+    const prod = state.products.find(p=>p.id===preset.productId);
+    div.querySelector('.product-name-input').value = prod ? prod.name : (preset.name||'');
+    div.querySelector('.product-id-input').value = preset.productId;
+    div.querySelector('.qty-input').value = preset.qty;
+    div.querySelector('.price-input').value = preset.price.toFixed(2);
+  }
+  updateSaleTotal();
+}
+function onSaleProductInput(lid){
+  const div = document.getElementById(lid);
+  const nameInput = div.querySelector('.product-name-input');
+  const idInput = div.querySelector('.product-id-input');
+  const priceInput = div.querySelector('.price-input');
+  const typed = nameInput.value.trim().toLowerCase();
+  const prod = state.products.find(p=>p.name.trim().toLowerCase()===typed);
+  if(prod){
+    idInput.value = prod.id;
+    priceInput.value = prod.sellPrice.toFixed(2);
+  } else {
+    idInput.value = '';
+  }
+  updateSaleTotal();
+}
+function removeLine(lid){
+  const el = document.getElementById(lid);
+  if(el) el.remove();
+  updateSaleTotal(); updatePurchaseTotal();
+}
+function updateSaleTotal(){
+  let total = 0;
+  document.querySelectorAll('#saleLines .line-item').forEach(div=>{
+    const qty = parseFloat(div.querySelector('.qty-input').value)||0;
+    const price = parseFloat(div.querySelector('.price-input').value)||0;
+    const sub = qty*price;
+    div.querySelector('.total-input').value = sub.toFixed(2);
+    total += sub;
+  });
+  const el = document.getElementById('saleTotal');
+  if(el && !saleTotalTouched) el.value = total.toFixed(2);
+  updateSalePreview();
+}
+function updateSalePreview(){
+  const paidEl = document.getElementById('salePaid');
+  if(!paidEl) return;
+  const total = parseFloat(document.getElementById('saleTotal')?.value)||0;
+  const paid = parseFloat(paidEl.value)||0;
+  const remaining = total - paid;
+  const el = document.getElementById('saleRemainingPreview');
+  if(el) el.textContent = remaining>0 ? `دين باقي على الزبون: ${money(remaining)}` : 'المبلغ مخلص بالكامل';
+}
+function saveSale(){
+  const editId = document.getElementById('saleEditId').value;
+  const date = document.getElementById('saleDate').value || todayStr();
+  const clientId = document.getElementById('saleClientId').value;
+  const typedClientName = document.getElementById('saleClientName').value.trim();
+  const clientName = clientId ? state.clients.find(c=>c.id===clientId)?.name : (typedClientName || 'زبون عابر');
+  const items = [];
+  let stockProblem = false;
+  document.querySelectorAll('#saleLines .line-item').forEach(div=>{
+    const productId = div.querySelector('.product-id-input').value;
+    const qty = parseFloat(div.querySelector('.qty-input').value)||0;
+    const price = parseFloat(div.querySelector('.price-input').value)||0;
+    if(productId && qty>0){
+      const prod = state.products.find(p=>p.id===productId);
+      items.push({productId, name: prod?prod.name:'', qty, price, sub: qty*price});
+    }
+  });
+  if(!items.length){ alert('زيد على الأقل منتوج واحد (تأكد أنك اخترتي اسم موجود من القائمة)'); return; }
+  const total = parseFloat(document.getElementById('saleTotal').value)||0;
+
+  if(editId){
+    const sale = state.sales.find(s=>s.id===editId);
+    if(!sale){ closeModal(); return; }
+    // نرجعو المخزون للحالة الأصلية قبل التعديل
+    sale.items.forEach(it=>{
+      const prod = state.products.find(p=>p.id===it.productId);
+      if(prod) prod.qty += it.qty;
+    });
+    items.forEach(it=>{
+      const prod = state.products.find(p=>p.id===it.productId);
+      if(prod && prod.qty < it.qty) stockProblem = true;
+    });
+    const finalizeEdit = ()=>{
+      items.forEach(it=>{
+        const prod = state.products.find(p=>p.id===it.productId);
+        if(prod) prod.qty -= it.qty;
+      });
+      sale.date = date; sale.partyId = clientId||null; sale.partyName = clientName;
+      sale.items = items; sale.total = total;
+      saveAll(['products','sales'], 'تم تعديل البيع ✓');
+      closeModal(); activeTab='sales'; render();
+    };
+    if(stockProblem){
+      showConfirmModal('الكمية المطلوبة كبر من المخزون ديال شي منتوج. بغيتي تكمل؟', finalizeEdit, '✅ نعم، كمل');
+    } else {
+      finalizeEdit();
+    }
+    return;
+  }
+
+  document.querySelectorAll('#saleLines .line-item').forEach(div=>{
+    const productId = div.querySelector('.product-id-input').value;
+    const qty = parseFloat(div.querySelector('.qty-input').value)||0;
+    if(productId && qty>0){
+      const prod = state.products.find(p=>p.id===productId);
+      if(prod && prod.qty < qty) stockProblem = true;
+    }
+  });
+  const paid = parseFloat(document.getElementById('salePaid').value)||0;
+  const finalizeSale = ()=>{
+    items.forEach(it=>{
+      const prod = state.products.find(p=>p.id===it.productId);
+      if(prod) prod.qty -= it.qty;
+    });
+    const payments = paid>0 ? [{date, amount: paid}] : [];
+    state.sales.push({id:uid('sl'), date, partyId: clientId||null, partyName: clientName, items, total, paid, payments});
+    saveAll(['products','sales'], 'تم حفظ البيع ✓');
+    closeModal(); activeTab='sales'; render();
+  };
+  if(stockProblem){
+    showConfirmModal('الكمية المطلوبة كبر من المخزون ديال شي منتوج. بغيتي تكمل؟', finalizeSale, '✅ نعم، كمل');
+  } else {
+    finalizeSale();
+  }
+}
+
+function openPurchaseModal(editId){
+  if(!state.products.length){ alert('خاصك تزيد منتوج بور اش تقدر تدير شراء'); openProductModal(); return; }
+  purchTotalTouched = false;
+  const editing = !!editId;
+  const purch = editing ? state.purchases.find(p=>p.id===editId) : null;
+  showModal(`
+    <h2>${editing?'تعديل الشراء':'شراء جديد'}</h2>
+    <div class="sub">${editing?'صحح المنتوجات، الكمية، ولا المورد فهاد العملية':'اكتب اسم المورد والمنتوجات اللي جبتي، المخزون غادي يزيد وحدو'}</div>
+    <input type="hidden" id="purchEditId" value="${editing?purch.id:''}">
+    ${datalistOptionsHtml('suppliersDatalist', state.suppliers.map(s=>s.name))}
+    ${datalistOptionsHtml('productsDatalist', state.products.map(p=>p.name))}
+    <div class="row2">
+      <div class="field"><label>التاريخ</label><input id="purchDate" type="date" value="${editing?purch.date:todayStr()}"></div>
+      <div class="field"><label>المورد</label>
+        <input type="text" id="purchSupplierName" list="suppliersDatalist" placeholder="اكتب الاسم (أو سيبه فارغ)" oninput="onPurchSupplierInput()">
+        <input type="hidden" id="purchSupplierId">
+      </div>
+    </div>
+    <div id="purchLines"></div>
+    <button class="btn btn-outline btn-sm" onclick="addPurchaseLine()">+ زيد منتوج</button>
+    <div class="total-box"><span>المجموع</span><input id="purchTotal" type="number" min="0" step="0.01" class="amount" style="width:130px; text-align:left; background:transparent; border:1px solid var(--border); border-radius:8px; padding:4px 8px;" oninput="purchTotalTouched=true; updatePurchasePreview()"></div>
+    ${editing ? `<div class="warn">المبلغ المؤدى (${money(purch.paid!=null?purch.paid:purch.total)}) ما كيتبدلش من هنا — استعمل زر "دفع نقدي" فالجدول باش تسدد.</div>`
+      : `<div class="field"><label>المبلغ المؤدى الآن</label><input id="purchPaid" type="number" min="0" step="0.01" placeholder="0.00" oninput="updatePurchasePreview()"></div>
+         <div class="warn" id="purchRemainingPreview"></div>`}
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-green" onclick="savePurchase()">${editing?'حفظ التعديلات':'تسجيل الشراء'}</button>
+    </div>
+  `);
+  if(editing){
+    if(purch.partyId){
+      document.getElementById('purchSupplierName').value = purch.partyName || '';
+      document.getElementById('purchSupplierId').value = purch.partyId;
+    } else if(purch.partyName && purch.partyName !== 'بلا مورد محدد'){
+      document.getElementById('purchSupplierName').value = purch.partyName;
+    }
+    purch.items.forEach(it=> addPurchaseLine(it));
+    updatePurchaseTotal();
+  } else {
+    addPurchaseLine();
+  }
+}
+function onPurchSupplierInput(){
+  const nameVal = document.getElementById('purchSupplierName').value.trim();
+  const match = state.suppliers.find(s=>s.name.trim().toLowerCase()===nameVal.toLowerCase());
+  document.getElementById('purchSupplierId').value = match ? match.id : '';
+}
+function addPurchaseLine(preset){
+  const wrap = document.getElementById('purchLines');
+  const lid = uid('pln');
+  const div = document.createElement('div');
+  div.className='line-item';
+  div.id = lid;
+  div.innerHTML = `
+    <div class="field">
+      <label>المنتوج</label>
+      <input type="text" class="product-name-input" list="productsDatalist" placeholder="اكتب اسم المنتوج..." oninput="onPurchProductInput('${lid}')">
+      <input type="hidden" class="product-id-input">
+    </div>
+    <div class="field"><label>الكمية</label><input type="number" class="qty-input" min="1" placeholder="0" oninput="updatePurchaseTotal()"></div>
+    <div class="field"><label>ثمن الشراء للوحدة</label><input type="number" class="price-input" min="0" step="0.01" oninput="updatePurchaseTotal()"></div>
+    <div class="field"><label>المجموع</label><input type="text" class="total-input" disabled value="0.00"></div>
+    <button class="remove-line" onclick="removeLine('${lid}')">✕</button>
+  `;
+  wrap.appendChild(div);
+  if(preset){
+    const prod = state.products.find(p=>p.id===preset.productId);
+    div.querySelector('.product-name-input').value = prod ? prod.name : (preset.name||'');
+    div.querySelector('.product-id-input').value = preset.productId;
+    div.querySelector('.qty-input').value = preset.qty;
+    div.querySelector('.price-input').value = preset.price.toFixed(2);
+  }
+  updatePurchaseTotal();
+}
+function onPurchProductInput(lid){
+  const div = document.getElementById(lid);
+  const nameInput = div.querySelector('.product-name-input');
+  const idInput = div.querySelector('.product-id-input');
+  const priceInput = div.querySelector('.price-input');
+  const typed = nameInput.value.trim().toLowerCase();
+  const prod = state.products.find(p=>p.name.trim().toLowerCase()===typed);
+  if(prod){
+    idInput.value = prod.id;
+    priceInput.value = prod.buyPrice.toFixed(2);
+  } else {
+    idInput.value = '';
+  }
+  updatePurchaseTotal();
+}
+function updatePurchaseTotal(){
+  let total = 0;
+  document.querySelectorAll('#purchLines .line-item').forEach(div=>{
+    const qty = parseFloat(div.querySelector('.qty-input').value)||0;
+    const price = parseFloat(div.querySelector('.price-input').value)||0;
+    const sub = qty*price;
+    div.querySelector('.total-input').value = sub.toFixed(2);
+    total += sub;
+  });
+  const el = document.getElementById('purchTotal');
+  if(el && !purchTotalTouched) el.value = total.toFixed(2);
+  updatePurchasePreview();
+}
+function updatePurchasePreview(){
+  const paidEl = document.getElementById('purchPaid');
+  if(!paidEl) return;
+  const total = parseFloat(document.getElementById('purchTotal')?.value)||0;
+  const paid = parseFloat(paidEl.value)||0;
+  const remaining = total - paid;
+  const el = document.getElementById('purchRemainingPreview');
+  if(el) el.textContent = remaining>0 ? `دين باقي للمورد: ${money(remaining)}` : 'المبلغ مخلص بالكامل';
+}
+function savePurchase(){
+  const editId = document.getElementById('purchEditId').value;
+  const date = document.getElementById('purchDate').value || todayStr();
+  const supplierId = document.getElementById('purchSupplierId').value;
+  const typedSupplierName = document.getElementById('purchSupplierName').value.trim();
+  const supplierName = supplierId ? state.suppliers.find(s=>s.id===supplierId)?.name : (typedSupplierName || 'بلا مورد محدد');
+  const items = [];
+  document.querySelectorAll('#purchLines .line-item').forEach(div=>{
+    const productId = div.querySelector('.product-id-input').value;
+    const qty = parseFloat(div.querySelector('.qty-input').value)||0;
+    const price = parseFloat(div.querySelector('.price-input').value)||0;
+    if(productId && qty>0){
+      const prod = state.products.find(p=>p.id===productId);
+      items.push({productId, name: prod?prod.name:'', qty, price, sub: qty*price});
+    }
+  });
+  if(!items.length){ alert('زيد على الأقل منتوج واحد (تأكد أنك اخترتي اسم موجود من القائمة)'); return; }
+  const total = parseFloat(document.getElementById('purchTotal').value)||0;
+
+  if(editId){
+    const purch = state.purchases.find(p=>p.id===editId);
+    if(!purch){ closeModal(); return; }
+    // نرجعو المخزون للحالة الأصلية قبل التعديل (كنحيدو الكمية اللي كانت زادت)
+    purch.items.forEach(it=>{
+      const prod = state.products.find(p=>p.id===it.productId);
+      if(prod) prod.qty -= it.qty;
+    });
+    items.forEach(it=>{
+      const prod = state.products.find(p=>p.id===it.productId);
+      if(prod) prod.qty += it.qty;
+    });
+    purch.date = date; purch.partyId = supplierId||null; purch.partyName = supplierName;
+    purch.items = items; purch.total = total;
+    saveAll(['products','purchases'], 'تم تعديل الشراء ✓');
+    closeModal(); activeTab='purchases'; render();
+    return;
+  }
+
+  const paid = parseFloat(document.getElementById('purchPaid').value)||0;
+  items.forE
